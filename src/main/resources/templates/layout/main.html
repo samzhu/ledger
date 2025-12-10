@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Ledger - LLM Usage Analytics'">Ledger</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- htmx -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar -->
+    <aside class="fixed inset-y-0 left-0 w-64 bg-gray-900 text-white">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold">Ledger</h1>
+            <p class="text-gray-400 text-sm">LLM Usage Analytics</p>
+        </div>
+        <nav class="mt-6">
+            <a th:href="@{/dashboard}"
+               th:classappend="${currentPage == 'overview'} ? 'bg-gray-800' : ''"
+               class="flex items-center px-6 py-3 hover:bg-gray-800 transition-colors">
+                <span>System Overview</span>
+            </a>
+            <a th:href="@{/dashboard/users}"
+               th:classappend="${currentPage == 'users'} ? 'bg-gray-800' : ''"
+               class="flex items-center px-6 py-3 hover:bg-gray-800 transition-colors">
+                <span>User Usage</span>
+            </a>
+            <a th:href="@{/dashboard/models}"
+               th:classappend="${currentPage == 'models'} ? 'bg-gray-800' : ''"
+               class="flex items-center px-6 py-3 hover:bg-gray-800 transition-colors">
+                <span>Model Usage</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 p-8">
+        <div th:replace="${content}"></div>
+    </main>
+</body>
+</html>

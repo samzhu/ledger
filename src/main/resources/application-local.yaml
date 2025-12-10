@@ -1,0 +1,18 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://root:secret@localhost:27017/ledger?authSource=admin
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    stream:
+      default-binder: rabbit
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    io.github.samzhu.ledger: DEBUG

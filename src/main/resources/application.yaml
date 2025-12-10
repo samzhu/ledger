@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: ledger
+  profiles:
+    default: local
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cloud:
+    function:
+      definition: usageEventConsumer
+    stream:
+      bindings:
+        usageEventConsumer-in-0:
+          destination: llm-gateway-usage
+          group: ledger
+          content-type: application/cloudevents+json
+
+# Application configuration
+ledger:
+  batch:
+    size: 100
+    interval-ms: 5000
+  pricing:
+    # Claude Sonnet 4
+    claude-sonnet-4-20250514:
+      input-per-million: 3.00
+      output-per-million: 15.00
+      cache-read-per-million: 0.30
+      cache-write-per-million: 3.75
+    # Claude Opus 4
+    claude-opus-4-20250514:
+      input-per-million: 15.00
+      output-per-million: 75.00
+      cache-read-per-million: 1.50
+      cache-write-per-million: 18.75
+    # Claude Haiku 3.5
+    claude-haiku-3-5-20241022:
+      input-per-million: 0.80
+      output-per-million: 4.00
+      cache-read-per-million: 0.08
+      cache-write-per-million: 1.00
+
+# Graceful shutdown
+server:
+  shutdown: graceful
+  port: 8080
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    io.github.samzhu.ledger: DEBUG

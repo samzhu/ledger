@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: html(content=~{::content})}">
+<body>
+<div th:fragment="content">
+    <!-- Title & Date Selection -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">System Overview</h1>
+        <div class="flex gap-2">
+            <a th:href="@{/dashboard(days=7)}"
+               th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+                7 Days
+            </a>
+            <a th:href="@{/dashboard(days=14)}"
+               th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+                14 Days
+            </a>
+            <a th:href="@{/dashboard(days=30)}"
+               th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+                30 Days
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Total Requests</p>
+            <p class="text-3xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(stats.stream().mapToInt(s -> s.totalRequestCount()).sum(), 0, 'COMMA')}">
+                0
+            </p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Total Tokens</p>
+            <p class="text-3xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(stats.stream().mapToLong(s -> s.totalTokens()).sum(), 0, 'COMMA')}">
+                0
+            </p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Estimated Cost</p>
+            <p class="text-3xl font-bold text-green-600">
+                $<span th:text="${#numbers.formatDecimal(stats.stream().map(s -> s.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+            </p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Active Users</p>
+            <p class="text-3xl font-bold text-gray-800" th:text="${topUsers.size()}">0</p>
+        </div>
+    </div>
+
+    <!-- Trend Chart -->
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Daily Usage Trend</h2>
+        <canvas id="dailyChart" height="100"></canvas>
+    </div>
+
+    <!-- Top Users -->
+    <div class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Top 10 Users</h2>
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">User</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Requests</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Tokens</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Cost</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr th:each="user : ${topUsers}" class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
+                           class="text-blue-600 hover:underline"
+                           th:text="${user.userId}">user-id</a>
+                    </td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(user.totalRequestCount(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right text-green-600">
+                        $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(topUsers)}">
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        No user data available
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Chart.js Initialization -->
+    <script th:inline="javascript">
+        const stats = [[${stats}]];
+
+        const labels = stats.map(s => s.date).sort();
+        const tokenData = stats.sort((a, b) => a.date.localeCompare(b.date))
+                               .map(s => s.totalTokens);
+        const requestData = stats.sort((a, b) => a.date.localeCompare(b.date))
+                                 .map(s => s.totalRequestCount);
+
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Tokens',
+                        data: tokenData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

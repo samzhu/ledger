@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: html(content=~{::content})}">
+<body>
+<div th:fragment="content">
+    <!-- Breadcrumb -->
+    <nav class="mb-4 text-sm text-gray-500">
+        <a th:href="@{/dashboard/users}" class="hover:text-blue-600">User Usage</a>
+        <span class="mx-2">/</span>
+        <span th:text="${userId}">user-id</span>
+    </nav>
+
+    <!-- Title & Date Selection -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800" th:text="${userId}">User</h1>
+        <div class="flex gap-2">
+            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=7)}"
+               th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">7 Days</a>
+            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=14)}"
+               th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">14 Days</a>
+            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=30)}"
+               th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
+               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">30 Days</a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" th:if="${summary != null}">
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Total Requests</p>
+            <p class="text-3xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(summary.totalRequestCount(), 0, 'COMMA')}">0</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Total Tokens</p>
+            <p class="text-3xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(summary.totalTokens(), 0, 'COMMA')}">0</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">Estimated Cost</p>
+            <p class="text-3xl font-bold text-green-600">
+                $<span th:text="${#numbers.formatDecimal(summary.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
+            </p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <p class="text-gray-500 text-sm">First Seen</p>
+            <p class="text-lg font-medium text-gray-800"
+               th:text="${summary.firstSeenAt() != null} ? ${#temporals.format(summary.firstSeenAt(), 'yyyy-MM-dd')} : '-'">-</p>
+        </div>
+    </div>
+
+    <!-- Trend Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Token Usage Trend</h2>
+            <canvas id="tokenChart" height="200"></canvas>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Request Trend</h2>
+            <canvas id="requestChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Daily Details -->
+    <div class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Daily Details</h2>
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Date</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Requests</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Input Tokens</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Output Tokens</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Total Tokens</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Cost</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr th:each="usage : ${usages}" class="hover:bg-gray-50">
+                    <td class="px-4 py-3" th:text="${usage.date()}">-</td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(usage.requestCount(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(usage.totalInputTokens(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(usage.totalOutputTokens(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right"
+                        th:text="${#numbers.formatInteger(usage.totalTokens(), 0, 'COMMA')}">0</td>
+                    <td class="px-4 py-3 text-right text-green-600">
+                        $<span th:text="${#numbers.formatDecimal(usage.estimatedCostUsd(), 1, 2)}">0.00</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(usages)}">
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        No usage data for this period
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Chart.js -->
+    <script th:inline="javascript">
+        const usages = [[${usages}]];
+
+        const sortedUsages = usages.sort((a, b) => a.date.localeCompare(b.date));
+        const labels = sortedUsages.map(u => u.date);
+        const inputData = sortedUsages.map(u => u.totalInputTokens);
+        const outputData = sortedUsages.map(u => u.totalOutputTokens);
+        const requestData = sortedUsages.map(u => u.requestCount);
+
+        // Token Chart
+        new Chart(document.getElementById('tokenChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Input Tokens',
+                        data: inputData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Output Tokens',
+                        data: outputData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                        borderColor: 'rgb(16, 185, 129)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } }
+            }
+        });
+
+        // Request Chart
+        new Chart(document.getElementById('requestChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Requests',
+                    data: requestData,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

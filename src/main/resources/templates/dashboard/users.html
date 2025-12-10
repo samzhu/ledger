@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: html(content=~{::content})}">
+<body>
+<div th:fragment="content">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">User Usage</h1>
+
+    <div class="bg-white rounded-xl shadow">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">User ID</th>
+                    <th class="px-6 py-4 text-right text-sm font-medium text-gray-500">Total Requests</th>
+                    <th class="px-6 py-4 text-right text-sm font-medium text-gray-500">Total Tokens</th>
+                    <th class="px-6 py-4 text-right text-sm font-medium text-gray-500">Estimated Cost</th>
+                    <th class="px-6 py-4 text-right text-sm font-medium text-gray-500">Last Active</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr th:each="user : ${users}" class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
+                           class="text-blue-600 hover:underline font-medium"
+                           th:text="${user.userId}">user-id</a>
+                    </td>
+                    <td class="px-6 py-4 text-right"
+                        th:text="${#numbers.formatInteger(user.totalRequestCount(), 0, 'COMMA')}">0</td>
+                    <td class="px-6 py-4 text-right"
+                        th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
+                    <td class="px-6 py-4 text-right text-green-600">
+                        $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
+                    </td>
+                    <td class="px-6 py-4 text-right text-gray-500"
+                        th:text="${user.lastActiveAt() != null} ? ${#temporals.format(user.lastActiveAt(), 'yyyy-MM-dd HH:mm')} : '-'">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(users)}">
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                        No user data available
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
