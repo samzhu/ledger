@@ -19,12 +19,11 @@
 #
 # 必要的 Secrets (需先在 GCP Secret Manager 建立):
 #   - ledger-config: 此配置檔內容
-#   - (未來如需機敏配置可在此新增)
+#   - ledger-mongodb-uri: MongoDB 連接字串
 # =============================================================================
 
-# 機敏屬性來源 - 從 Secret Manager 讀取，覆蓋 application.yaml 的預設值
-# 範例 (未來如需機敏配置):
-# ledger-mongodb-uri: ${sm@ledger-mongodb-uri}
+# 機敏屬性來源 - 從 Secret Manager 讀取，覆蓋 application-gcp.yaml 的預設值
+ledger-mongodb-uri: ${sm@ledger-mongodb-uri}
 
 # 可觀測性 - 全量取樣便於除錯
 management:

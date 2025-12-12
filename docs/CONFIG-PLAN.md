@@ -776,6 +776,35 @@ config/application-secrets.properties
 3. 確認 CI 建置時設定 `SPRING_PROFILES_ACTIVE=aot`
 4. 參考 Gate 專案的 `docs/DEVELOPMENT-NOTES.md` 第 1 節
 
+### 9.3 Pub/Sub 整合測試 (可選)
+
+當未來需要更真實的 Pub/Sub 整合測試時 (如測試訊息確認、重試邏輯)，可加入 GCP 模擬器：
+
+1. **新增依賴**:
+   ```groovy
+   testImplementation 'org.testcontainers:gcloud'
+   ```
+
+2. **測試範例**:
+   ```java
+   @Container
+   private static final PubSubEmulatorContainer pubsubEmulator =
+       new PubSubEmulatorContainer(
+           DockerImageName.parse("gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators"));
+
+   @DynamicPropertySource
+   static void emulatorProperties(DynamicPropertyRegistry registry) {
+       registry.add("spring.cloud.gcp.pubsub.emulator-host",
+           pubsubEmulator::getEmulatorEndpoint);
+   }
+   ```
+
+3. **參考文件**:
+   - [Testcontainers GCloud Module](https://java.testcontainers.org/modules/gcloud/)
+   - [Google Cloud Emulators with Spring Boot](https://cloud.google.com/blog/products/application-development/develop-and-test-spring-boot-applications-consistently)
+
+**目前狀態**: 使用 `spring-cloud-stream-test-binder` 已足夠測試訊息消費邏輯
+
 ---
 
 ## 十、參考資料

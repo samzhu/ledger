@@ -13,10 +13,9 @@
 #   - 語法: ${sm@secret-name} 或 ${sm@project-id/secret-name/version}
 #   - 參考: https://googlecloudplatform.github.io/spring-cloud-gcp/7.4.1/reference/html/index.html#secret-manager
 #
-# Firestore MongoDB API:
-#   - 使用 Firestore 的 MongoDB 相容 API
-#   - 連接字串格式: mongodb://{project-id}:{database-id}@firestore.googleapis.com:443/...
-#   - 認證: MONGODB-OIDC (自動從 GCP 環境取得)
+# MongoDB 連接:
+#   - 使用 ledger-mongodb-uri 屬性，由環境配置檔 (lab/prod) 提供
+#   - 環境配置檔透過 ${sm@ledger-mongodb-uri} 從 Secret Manager 讀取
 #
 # 可觀測性說明 (OpenTelemetry Collector Sidecar):
 #   - Cloud Run 部署 OTel Collector 作為 Sidecar 容器
@@ -29,14 +28,12 @@ spring:
   # 啟用 Secret Manager Config Data API (所有 GCP 環境共用)
   config:
     import: sm@
-  # MongoDB 配置 (GCP Firestore MongoDB 相容 API)
+  # MongoDB 配置
   data:
     mongodb:
-      # Firestore MongoDB 相容 API 連接字串
-      # 格式: mongodb://{project-id}:{database-id}@firestore.googleapis.com:443/?ssl=true&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:GCP
-      # project-id: 自動從 GCP 環境取得
-      # database-id: 預設為 (default)，可透過環境變數覆蓋
-      uri: mongodb://${GCP_PROJECT_ID}:${FIRESTORE_DATABASE_ID:(default)}@firestore.googleapis.com:443/?ssl=true&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:GCP
+      # 連接字串由環境配置檔 (lab/prod) 提供
+      # 預設值供 AOT 編譯使用，執行時由 ledger-mongodb-uri 屬性覆蓋
+      uri: ${ledger-mongodb-uri:mongodb://placeholder:27017/ledger}
   cloud:
     # 明確啟用 GCP 功能 (覆蓋 local profile 的 enabled: false)
     gcp:
@@ -50,12 +47,16 @@ spring:
       bindings:
         usageEventConsumer-in-0:
           binder: pubsub
-          consumer:
-            auto-create-resources: false
-            ack-mode: AUTO
       binders:
         pubsub:
           type: pubsub
+      # Pub/Sub 特定的 consumer 配置 (如需要)
+      # 參考: https://googlecloudplatform.github.io/spring-cloud-gcp/7.4.1/reference/html/index.html#pubsub-stream-binder
+      # gcp:
+      #   pubsub:
+      #     default:
+      #       consumer:
+      #         auto-create-resources: false
 
 # GCP 環境 OTLP 配置
 # 發送到 Sidecar Collector (localhost)，由 Collector 導出到 GCP 服務

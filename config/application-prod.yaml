@@ -8,7 +8,14 @@
 #   1. 此檔案內容存放於 GCP Secret Manager (secret: ledger-config)
 #   2. Cloud Run 掛載到 /config/application-prod.yaml
 #   3. Spring Boot 透過 SPRING_CONFIG_ADDITIONAL_LOCATION=file:/config/ 載入
+#
+# 必要的 Secrets (需先在 GCP Secret Manager 建立):
+#   - ledger-config: 此配置檔內容
+#   - ledger-mongodb-uri: MongoDB 連接字串
 # =============================================================================
+
+# 機敏屬性來源 - 從 Secret Manager 讀取，覆蓋 application-gcp.yaml 的預設值
+ledger-mongodb-uri: ${sm@ledger-mongodb-uri}
 
 # 批量處理配置 (生產環境可能需要更大的批量以提升效能)
 ledger:
