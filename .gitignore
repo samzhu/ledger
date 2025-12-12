@@ -36,3 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 .DS_Store
+
+### Secrets ###
+# 本地開發機敏配置 (不進版控)
+config/application-secrets.properties

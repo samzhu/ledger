@@ -1,14 +1,42 @@
+# =============================================================================
+# Ledger - LLM 用量帳本服務 - 基礎共用配置
+# =============================================================================
+# 此檔案包進 Docker Image,包含所有環境共用的配置
+# 環境特定配置透過 config/ 目錄下的 profile 檔案覆蓋
+#
+# 配置設計哲學:
+#   - 雙層 Profile 架構: 基礎設施層 (local/gcp) + 行為層 (dev/lab/prod)
+#   - AOT 友好: 所有屬性提供預設值,使用 ${property:default} 語法
+#   - 結構與值分離: YAML 定義結構,值由環境提供
+# =============================================================================
+
 spring:
   application:
     name: ledger
   profiles:
-    default: local
+    # 預設 profiles (本地開發)
+    # 雙層架構: local (基礎設施) + dev (行為)
+    default: local,dev
+  # 啟用 Virtual Threads (Java 21+)
+  # 對事件消費和聚合計算有顯著效能提升
   threads:
     virtual:
       enabled: true
+  # 啟用 @Observed 註解支援 (預先配置,確保專案一致性)
+  observations:
+    annotations:
+      enabled: true
+  # 優雅關閉配置
   lifecycle:
     timeout-per-shutdown-phase: 30s
   cloud:
+    # 禁用 RefreshScope - Spring Cloud RefreshScope 不支援 AOT/Native Image
+    # 參考: https://github.com/spring-cloud/spring-cloud-release/wiki/AOT-transformations-and-native-image-support
+    refresh:
+      enabled: false
+    # Spring Cloud Stream 配置
+    # Function Bean 名稱: usageEventConsumer
+    # 自動綁定名稱: usageEventConsumer-in-0
     function:
       definition: usageEventConsumer
     stream:
@@ -18,11 +46,11 @@ spring:
           group: ledger
           content-type: application/cloudevents+json
 
-# Application configuration
+# 應用程式配置
 ledger:
   batch:
-    size: 100
-    interval-ms: 5000
+    size: 100           # 累積 100 筆後批量寫入
+    interval-ms: 5000   # 或每 5 秒寫入一次
   pricing:
     # Claude Sonnet 4
     claude-sonnet-4-20250514:
@@ -43,22 +71,34 @@ ledger:
       cache-read-per-million: 0.08
       cache-write-per-million: 1.00
 
-# Graceful shutdown
+# 優雅關閉
 server:
   shutdown: graceful
   port: 8080
 
-# Actuator
+# Actuator 配置
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
       probes:
         enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  # OpenTelemetry 配置 (Spring Boot 3.x)
+  # 取樣率由環境 profile 控制 (lab=1.0, prod=0.1)
+  # 本地開發: Docker Compose 自動偵測 grafana-lgtm 容器並配置 OTLP 端點
+  # 部署環境: 設定業界標準環境變數 OTEL_EXPORTER_OTLP_ENDPOINT
+  tracing:
+    sampling:
+      probability: 1.0
 
 logging:
   level:

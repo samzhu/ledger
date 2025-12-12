@@ -8,7 +8,7 @@ plugins {
 
 group = 'io.github.samzhu'
 version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+description = 'LLM 用量帳本服務'
 
 java {
 	toolchain {
@@ -46,10 +46,12 @@ dependencies {
 	runtimeOnly 'io.micrometer:micrometer-registry-otlp'
 	// Event Driven
 	implementation 'org.springframework.cloud:spring-cloud-stream'
-	implementation 'org.springframework.cloud:spring-cloud-stream-binder-rabbit'
+	// 生產環境使用 GCP Pub/Sub
 	implementation "com.google.cloud:spring-cloud-gcp-pubsub-stream-binder"
-	implementation "io.cloudevents:cloudevents-spring:4.0.1"
-	implementation "io.cloudevents:cloudevents-json-jackson:4.0.1"
+	// GCP Secret Manager 整合 (sm@ 語法)
+	implementation "com.google.cloud:spring-cloud-gcp-starter-secretmanager"
+	// 開發環境使用 RabbitMQ
+	implementation 'org.springframework.cloud:spring-cloud-stream-binder-rabbit'
 	//
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'

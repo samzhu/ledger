@@ -1,0 +1,44 @@
+# =============================================================================
+# LAB 環境配置
+# =============================================================================
+# 用途: 實驗/開發環境 (部署於 GCP Cloud Run)
+# 啟動: spring.profiles.active=gcp,lab
+#
+# 部署方式:
+#   1. 此檔案內容存放於 GCP Secret Manager (secret: ledger-config)
+#   2. Cloud Run 掛載到 /config/application-lab.yaml
+#   3. Spring Boot 透過 SPRING_CONFIG_ADDITIONAL_LOCATION=file:/config/ 載入
+#
+# Secret 名稱說明:
+#   每個 GCP Project 為獨立環境，因此 secret 名稱不需環境後綴
+#   例如：vibe-lab 專案和 vibe-prod 專案都使用 "ledger-config" 名稱
+#
+# Secret Manager 整合:
+#   application-gcp.yaml 已啟用 spring.config.import: sm@
+#   因此 ${sm@secret-name} 語法可用於引用其他 secrets
+#
+# 必要的 Secrets (需先在 GCP Secret Manager 建立):
+#   - ledger-config: 此配置檔內容
+#   - (未來如需機敏配置可在此新增)
+# =============================================================================
+
+# 機敏屬性來源 - 從 Secret Manager 讀取，覆蓋 application.yaml 的預設值
+# 範例 (未來如需機敏配置):
+# ledger-mongodb-uri: ${sm@ledger-mongodb-uri}
+
+# 可觀測性 - 全量取樣便於除錯
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        # 注意: 移除 env,configprops 避免洩漏 secrets
+        include: health,info,metrics,prometheus
+
+# 日誌 - DEBUG 便於開發
+logging:
+  level:
+    root: INFO
+    io.github.samzhu.ledger: DEBUG

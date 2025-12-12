@@ -1,18 +1,50 @@
+# =============================================================================
+# Ledger - 本地開發基礎設施
+# =============================================================================
+# Profile: local
+# 用途: 本地開發環境基礎設施,使用 RabbitMQ + 本地 MongoDB
+#
+# 此 profile 只負責基礎設施配置 (MQ binder, DB connection)
+# 開發行為設定由 dev profile 處理
+#
+# 重要: 不要使用 spring.autoconfigure.exclude 排除 GCP 類別
+#       這會導致 GraalVM Native Image AOT 編譯時無法註冊 Pub/Sub Binder
+#       改用 spring.cloud.gcp.*.enabled=false 來禁用功能
+# =============================================================================
+
 spring:
+  # MongoDB 配置 (本地 Docker Compose)
   data:
     mongodb:
-      uri: mongodb://root:secret@localhost:27017/ledger?authSource=admin
+      uri: ${MONGODB_URI:mongodb://root:secret@localhost:27017/ledger?authSource=admin}
+  # RabbitMQ 配置 (本地 Docker Compose)
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   cloud:
+    # 停用 GCP 功能 (透過 property 而非 autoconfigure.exclude)
+    # 這樣 AOT 編譯時仍會註冊 Pub/Sub Binder,但本地開發時不會啟用
+    gcp:
+      core:
+        enabled: false
+      pubsub:
+        enabled: false
+      secretmanager:
+        enabled: false
     stream:
+      # 使用 RabbitMQ binder
       default-binder: rabbit
+      bindings:
+        usageEventConsumer-in-0:
+          binder: rabbit
+  # 開發時關閉 Thymeleaf 快取
   thymeleaf:
     cache: false
 
-logging:
-  level:
-    io.github.samzhu.ledger: DEBUG
+# 停用 GCP 健康檢查 (本地使用 RabbitMQ)
+management:
+  health:
+    gcp:
+      enabled: false

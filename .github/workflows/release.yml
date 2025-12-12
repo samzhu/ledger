@@ -1,0 +1,67 @@
+name: Build and Push Native Docker Image
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version tag (e.g., 1.0.0)'
+        required: true
+        default: 'latest'
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
+  IMAGE_NAME: ledger
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Native Docker Image
+        env:
+          # AOT 編譯時使用 aot profile，確保 RabbitMQ 和 Pub/Sub Binder 都被正確註冊
+          # 執行時 profile 由 Cloud Run 環境變數覆蓋 (gcp,lab 或 gcp,prod)
+          SPRING_PROFILES_ACTIVE: aot
+        run: |
+          ./gradlew bootBuildImage \
+            --imageName=docker.io/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
+            --publishImage
+
+      - name: Output image info
+        run: |
+          echo "### Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`docker.io/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | Spring Native (GraalVM) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull docker.io/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

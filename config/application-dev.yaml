@@ -1,0 +1,41 @@
+# =============================================================================
+# DEV 環境配置 - 本地開發環境行為設定
+# =============================================================================
+# 用途: 本地開發環境
+# 預設: spring.profiles.default=local,dev (自動啟用)
+#
+# 機敏值來源: config/application-secrets.properties
+# 屬性名稱與 GCP Secret Manager 一致，便於管理:
+#   - 本地: ${ledger-xxx} 從 properties 檔案讀取
+#   - GCP:  ${sm@ledger-xxx} 從 Secret Manager 讀取
+# =============================================================================
+
+spring:
+  config:
+    # 載入本地機敏設定 (optional: 檔案不存在也不報錯)
+    import: "optional:file:./config/application-secrets.properties"
+
+# 批量處理配置 (本地開發可減少批量大小以便測試)
+ledger:
+  batch:
+    size: 10           # 本地開發: 累積 10 筆就寫入 (便於測試)
+    interval-ms: 2000  # 本地開發: 每 2 秒寫入 (便於測試)
+
+# 可觀測性 - 全量取樣便於除錯
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        # 本地開發: 暴露所有端點 (包含 env, configprops)
+        include: health,info,metrics,prometheus,env,configprops
+
+# 日誌 - DEBUG 便於開發
+logging:
+  level:
+    root: INFO
+    io.github.samzhu.ledger: DEBUG
+    org.springframework.data.mongodb: DEBUG
+    org.springframework.cloud.stream: DEBUG

@@ -1,0 +1,79 @@
+# =============================================================================
+# Ledger - GCP 基礎設施
+# =============================================================================
+# Profile: gcp
+# 用途: GCP 雲端環境，使用 Pub/Sub + Firestore (MongoDB API)
+#
+# GCP 配置說明:
+#   - project-id: 自動從 GCP 環境取得，無需手動設定
+#   - Topic 名稱: llm-gateway-usage (與 Gate 一致)
+#
+# Secret Manager 整合:
+#   - 使用 sm@ 語法從 GCP Secret Manager 讀取機敏值
+#   - 語法: ${sm@secret-name} 或 ${sm@project-id/secret-name/version}
+#   - 參考: https://googlecloudplatform.github.io/spring-cloud-gcp/7.4.1/reference/html/index.html#secret-manager
+#
+# Firestore MongoDB API:
+#   - 使用 Firestore 的 MongoDB 相容 API
+#   - 連接字串格式: mongodb://{project-id}:{database-id}@firestore.googleapis.com:443/...
+#   - 認證: MONGODB-OIDC (自動從 GCP 環境取得)
+#
+# 可觀測性說明 (OpenTelemetry Collector Sidecar):
+#   - Cloud Run 部署 OTel Collector 作為 Sidecar 容器
+#   - 應用程式發送 OTLP 到 localhost:4317 (gRPC) 或 localhost:4318 (HTTP)
+#   - Collector 自動導出到 Cloud Trace / Cloud Monitoring / Cloud Logging
+#   - 參考: https://cloud.google.com/stackdriver/docs/instrumentation/opentelemetry-collector-cloud-run
+# =============================================================================
+
+spring:
+  # 啟用 Secret Manager Config Data API (所有 GCP 環境共用)
+  config:
+    import: sm@
+  # MongoDB 配置 (GCP Firestore MongoDB 相容 API)
+  data:
+    mongodb:
+      # Firestore MongoDB 相容 API 連接字串
+      # 格式: mongodb://{project-id}:{database-id}@firestore.googleapis.com:443/?ssl=true&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:GCP
+      # project-id: 自動從 GCP 環境取得
+      # database-id: 預設為 (default)，可透過環境變數覆蓋
+      uri: mongodb://${GCP_PROJECT_ID}:${FIRESTORE_DATABASE_ID:(default)}@firestore.googleapis.com:443/?ssl=true&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:GCP
+  cloud:
+    # 明確啟用 GCP 功能 (覆蓋 local profile 的 enabled: false)
+    gcp:
+      core:
+        enabled: true
+      pubsub:
+        enabled: true
+      secretmanager:
+        enabled: true
+    stream:
+      bindings:
+        usageEventConsumer-in-0:
+          binder: pubsub
+          consumer:
+            auto-create-resources: false
+            ack-mode: AUTO
+      binders:
+        pubsub:
+          type: pubsub
+
+# GCP 環境 OTLP 配置
+# 發送到 Sidecar Collector (localhost)，由 Collector 導出到 GCP 服務
+management:
+  health:
+    # 停用 RabbitMQ 健康檢查 (GCP 使用 Pub/Sub，不需要 RabbitMQ)
+    rabbit:
+      enabled: false
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics

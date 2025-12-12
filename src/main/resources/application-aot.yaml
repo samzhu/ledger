@@ -1,0 +1,30 @@
+# =============================================================================
+# Ledger - AOT 編譯專用配置
+# =============================================================================
+# Profile: aot
+# 用途: GraalVM Native Image AOT 編譯時使用
+#
+# 重要說明:
+#   - 此 profile 確保所有 binders (RabbitMQ + Pub/Sub) 在 AOT 編譯時都被註冊
+#   - 不要在執行時使用此 profile
+#   - 執行時應使用 local (開發) 或 gcp (生產) profile
+# =============================================================================
+
+spring:
+  cloud:
+    # 啟用 GCP 功能讓 Pub/Sub Binder 被 AOT 處理
+    gcp:
+      core:
+        enabled: true
+      pubsub:
+        enabled: true
+      # 停用 Secret Manager (AOT 編譯時不需要)
+      secretmanager:
+        enabled: false
+    stream:
+      # 配置兩個 binders，讓 AOT 都能處理
+      binders:
+        rabbit:
+          type: rabbit
+        pubsub:
+          type: pubsub

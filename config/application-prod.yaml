@@ -1,0 +1,34 @@
+# =============================================================================
+# PROD 環境配置
+# =============================================================================
+# 用途: 生產環境 (部署於 GCP Cloud Run)
+# 啟動: spring.profiles.active=gcp,prod
+#
+# 部署方式:
+#   1. 此檔案內容存放於 GCP Secret Manager (secret: ledger-config)
+#   2. Cloud Run 掛載到 /config/application-prod.yaml
+#   3. Spring Boot 透過 SPRING_CONFIG_ADDITIONAL_LOCATION=file:/config/ 載入
+# =============================================================================
+
+# 批量處理配置 (生產環境可能需要更大的批量以提升效能)
+ledger:
+  batch:
+    size: 200          # 生產環境: 累積 200 筆再寫入
+    interval-ms: 10000 # 生產環境: 每 10 秒寫入
+
+# 可觀測性 - 10% 取樣減少開銷
+management:
+  tracing:
+    sampling:
+      probability: 0.1
+  endpoints:
+    web:
+      exposure:
+        # 生產環境: 只暴露必要端點
+        include: health,info,metrics,prometheus
+
+# 日誌 - INFO 減少日誌量
+logging:
+  level:
+    root: INFO
+    io.github.samzhu.ledger: INFO
