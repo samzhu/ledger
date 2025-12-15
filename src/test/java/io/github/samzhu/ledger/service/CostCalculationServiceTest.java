@@ -44,8 +44,10 @@ class CostCalculationServiceTest {
         );
 
         LedgerProperties properties = new LedgerProperties(
-            new BatchConfig(100, 5000),
-            pricing
+            new BatchConfig(1000, "0 0,30 * * * *", "0 0 * * * *"),
+            pricing,
+            new LedgerProperties.LatencyConfig(100),
+            new LedgerProperties.QuotaConfig(0, java.math.BigDecimal.ZERO, "MONTHLY")
         );
 
         costService = new CostCalculationService(properties);
@@ -156,6 +158,6 @@ class CostCalculationServiceTest {
             "trace-1",
             "req-1"
         );
-        return new UsageEvent("event-1", "user-1", LocalDate.now(), data);
+        return new UsageEvent("event-1", "user-1", LocalDate.now(), java.time.Instant.now(), data);
     }
 }

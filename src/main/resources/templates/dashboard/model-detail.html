@@ -7,102 +7,29 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <nav class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                <a th:href="@{/dashboard/users}" class="hover:text-blue-600">Users</a>
+                <a th:href="@{/dashboard/models}" class="hover:text-blue-600">Models</a>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
-                <span th:text="${userId}" class="text-gray-700">user-id</span>
+                <span th:text="${modelName}" class="text-gray-700">model-name</span>
             </nav>
-            <h1 class="text-2xl font-bold text-gray-800" th:text="${userId}">User Detail</h1>
+            <h1 class="text-2xl font-bold text-gray-800" th:text="${modelName}">Model Detail</h1>
         </div>
         <div class="flex gap-2">
-            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=7)}"
+            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=7)}"
                th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">7 Days</a>
-            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=14)}"
+            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=14)}"
                th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">14 Days</a>
-            <a th:href="@{/dashboard/users/{id}(id=${userId}, days=30)}"
+            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=30)}"
                th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">30 Days</a>
         </div>
     </div>
 
-    <!-- Quota Status Card (if quota enabled) -->
-    <div th:if="${quota != null && quota.quotaConfig() != null && quota.quotaConfig().enabled()}"
-         class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-800">Quota Status</h2>
-                <p class="text-sm text-gray-500"
-                   th:text="'Period: ' + ${quota.periodStartDate()} + ' ~ ' + ${quota.periodEndDate()}">Period: 2025-12-01 ~ 2025-12-31</p>
-            </div>
-            <span th:if="${quota.quotaExceeded()}"
-                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
-                Quota Exceeded
-            </span>
-            <span th:if="${!quota.quotaExceeded()}"
-                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-                Within Limits
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Token Usage -->
-            <div class="text-center">
-                <div class="relative inline-flex items-center justify-center">
-                    <svg class="w-24 h-24 transform -rotate-90">
-                        <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                        <circle cx="48" cy="48" r="40"
-                                th:attr="stroke=${quota.tokenUsagePercent() >= 90 ? '#ef4444' : (quota.tokenUsagePercent() >= 70 ? '#f59e0b' : '#10b981')}"
-                                stroke-width="8" fill="none"
-                                stroke-linecap="round"
-                                th:style="'stroke-dasharray: 251; stroke-dashoffset: ' + ${251 - (251 * T(Math).min(100, quota.tokenUsagePercent()) / 100)}"/>
-                    </svg>
-                    <span class="absolute text-xl font-bold"
-                          th:text="${#numbers.formatDecimal(quota.tokenUsagePercent(), 1, 0) + '%'}">0%</span>
-                </div>
-                <p class="mt-2 text-sm font-medium text-gray-700">Token Usage</p>
-                <p class="text-xs text-gray-500"
-                   th:text="${#numbers.formatInteger(quota.periodTokenUsed(), 0, 'COMMA')} + ' / ' + ${#numbers.formatInteger(quota.quotaConfig().tokenLimit(), 0, 'COMMA')}">0 / 0</p>
-            </div>
-
-            <!-- Cost Usage -->
-            <div class="text-center">
-                <div class="relative inline-flex items-center justify-center">
-                    <svg class="w-24 h-24 transform -rotate-90">
-                        <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                        <circle cx="48" cy="48" r="40"
-                                th:attr="stroke=${quota.costUsagePercent() >= 90 ? '#ef4444' : (quota.costUsagePercent() >= 70 ? '#f59e0b' : '#10b981')}"
-                                stroke-width="8" fill="none"
-                                stroke-linecap="round"
-                                th:style="'stroke-dasharray: 251; stroke-dashoffset: ' + ${251 - (251 * T(Math).min(100, quota.costUsagePercent()) / 100)}"/>
-                    </svg>
-                    <span class="absolute text-xl font-bold"
-                          th:text="${#numbers.formatDecimal(quota.costUsagePercent(), 1, 0) + '%'}">0%</span>
-                </div>
-                <p class="mt-2 text-sm font-medium text-gray-700">Cost Usage</p>
-                <p class="text-xs text-gray-500"
-                   th:text="'$' + ${#numbers.formatDecimal(quota.periodCostUsed(), 1, 2)} + ' / $' + ${#numbers.formatDecimal(quota.quotaConfig().costLimitUsd(), 1, 2)}">$0 / $0</p>
-            </div>
-
-            <!-- Period Info -->
-            <div class="text-center flex flex-col justify-center">
-                <p class="text-3xl font-bold text-blue-600" th:text="${quota.getRemainingDays()}">0</p>
-                <p class="text-sm text-gray-500">Days Remaining</p>
-                <p class="mt-2 text-xs text-gray-400" th:text="'Resets: ' + ${quota.quotaConfig().period()}">Resets: MONTHLY</p>
-            </div>
-        </div>
-    </div>
-
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <!-- Total Requests -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div class="flex items-center justify-between mb-2">
@@ -113,10 +40,11 @@
                     </svg>
                 </div>
             </div>
-            <p class="text-2xl font-bold text-gray-800"
-               th:text="${quota != null} ? ${#numbers.formatInteger(quota.totalRequestCount(), 0, 'COMMA')} : '0'">0</p>
-            <p class="text-xs text-gray-500 mt-1" th:if="${quota != null}"
-               th:text="'Period: ' + ${#numbers.formatInteger(quota.periodRequestCount(), 0, 'COMMA')} + ' requests'">Period: 0 requests</p>
+            <p class="text-2xl font-bold text-gray-800" th:text="${#numbers.formatInteger(totalRequests, 0, 'COMMA')}">0</p>
+            <p class="text-xs text-gray-500 mt-1">
+                <span th:class="${successRate >= 95} ? 'text-green-600' : (${successRate >= 90} ? 'text-yellow-600' : 'text-red-600')"
+                      th:text="${#numbers.formatDecimal(successRate, 1, 1) + '% success'}">98.5% success</span>
+            </p>
         </div>
 
         <!-- Total Tokens -->
@@ -129,10 +57,9 @@
                     </svg>
                 </div>
             </div>
-            <p class="text-2xl font-bold text-gray-800"
-               th:text="${quota != null} ? ${#numbers.formatInteger(quota.totalTokens(), 0, 'COMMA')} : '0'">0</p>
-            <p class="text-xs text-gray-500 mt-1" th:if="${quota != null}"
-               th:text="'In: ' + ${#numbers.formatInteger(quota.totalInputTokens(), 0, 'COMMA')} + ' | Out: ' + ${#numbers.formatInteger(quota.totalOutputTokens(), 0, 'COMMA')}">In: 0 | Out: 0</p>
+            <p class="text-2xl font-bold text-gray-800" th:text="${#numbers.formatInteger(totalTokens, 0, 'COMMA')}">0</p>
+            <p class="text-xs text-gray-500 mt-1"
+               th:text="'In: ' + ${#numbers.formatInteger(totalInputTokens, 0, 'COMMA')} + ' | Out: ' + ${#numbers.formatInteger(totalOutputTokens, 0, 'COMMA')}">In: 0 | Out: 0</p>
         </div>
 
         <!-- Estimated Cost -->
@@ -146,28 +73,39 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-green-600">
-                $<span th:text="${quota != null} ? ${#numbers.formatDecimal(quota.totalEstimatedCostUsd(), 1, 2)} : '0.00'">0.00</span>
+                $<span th:text="${#numbers.formatDecimal(totalCost, 1, 2)}">0.00</span>
             </p>
         </div>
 
-        <!-- First Seen -->
+        <!-- Unique Users -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-500 text-sm font-medium">First Seen</p>
+                <p class="text-gray-500 text-sm font-medium">Unique Users</p>
+                <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800" th:text="${uniqueUsers}">0</p>
+        </div>
+
+        <!-- Days Active -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Days Active</p>
                 <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
                     <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
             </div>
-            <p class="text-lg font-bold text-gray-800"
-               th:text="${quota != null && quota.firstSeenAt() != null} ? ${#temporals.format(quota.firstSeenAt(), 'yyyy-MM-dd')} : '-'">-</p>
-            <p class="text-xs text-gray-500 mt-1" th:if="${quota != null && quota.lastActiveAt() != null}"
-               th:text="'Last: ' + ${#temporals.format(quota.lastActiveAt(), 'MM-dd HH:mm')}">Last: -</p>
+            <p class="text-2xl font-bold text-gray-800" th:text="${usages.size()}">0</p>
+            <p class="text-xs text-gray-500 mt-1" th:text="'of ' + ${days} + ' days'">of 7 days</p>
         </div>
     </div>
 
-    <!-- Charts Row 1: Trends -->
+    <!-- Charts Row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Token Usage Trend -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -182,12 +120,12 @@
         </div>
     </div>
 
-    <!-- Latency & Cache Row -->
+    <!-- Latency & Hourly Row -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <!-- Latency Analysis -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Latency Analysis</h3>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="text-center p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">P50</p>
                     <p class="text-lg font-semibold text-gray-800" id="p50Value">-</p>
@@ -205,9 +143,7 @@
                     <p class="text-lg font-semibold text-red-600" id="p99Value">-</p>
                 </div>
             </div>
-            <div class="mt-4">
-                <canvas id="latencyChart" height="100"></canvas>
-            </div>
+            <canvas id="latencyChart" height="100"></canvas>
         </div>
 
         <!-- Cache Efficiency -->
@@ -243,28 +179,6 @@
         </div>
     </div>
 
-    <!-- Model & Cost Breakdown Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Model Distribution -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Model Usage (Last Day)</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <canvas id="modelPieChart" height="200"></canvas>
-                </div>
-                <div id="modelList" class="overflow-y-auto max-h-48 text-sm space-y-2">
-                    <p class="text-gray-400 text-center">No model data</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cost Breakdown -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Cost Breakdown (Last Day)</h3>
-            <canvas id="costChart" height="200"></canvas>
-        </div>
-    </div>
-
     <!-- Daily Details Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -280,6 +194,7 @@
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Input</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Output</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Users</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Latency</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cost</th>
                     </tr>
@@ -295,6 +210,7 @@
                         <td class="px-4 py-3 text-sm text-right" th:text="${#numbers.formatInteger(usage.totalInputTokens(), 0, 'COMMA')}">0</td>
                         <td class="px-4 py-3 text-sm text-right" th:text="${#numbers.formatInteger(usage.totalOutputTokens(), 0, 'COMMA')}">0</td>
                         <td class="px-4 py-3 text-sm text-right font-medium" th:text="${#numbers.formatInteger(usage.totalTokens(), 0, 'COMMA')}">0</td>
+                        <td class="px-4 py-3 text-sm text-right" th:text="${usage.uniqueUsers()}">0</td>
                         <td class="px-4 py-3 text-sm text-right"
                             th:text="${usage.latencyStats() != null} ? ${#numbers.formatDecimal(usage.latencyStats().avgLatencyMs(), 0, 0) + 'ms'} : '-'">-</td>
                         <td class="px-4 py-3 text-sm text-right text-green-600 font-medium">
@@ -302,7 +218,7 @@
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(usages)}">
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <td colspan="9" class="px-4 py-8 text-center text-gray-500">
                             No usage data for this period
                         </td>
                     </tr>
@@ -348,7 +264,7 @@
             }
         });
 
-        // Request Chart (Line with Success Rate)
+        // Request Chart
         const successRateData = sortedUsages.map(u =>
             u.requestCount > 0 ? (u.successCount / u.requestCount * 100) : 100
         );
@@ -389,7 +305,7 @@
             }
         });
 
-        // Latency Chart & Values
+        // Latency Values & Chart
         if (lastUsage && lastUsage.latencyStats) {
             const ls = lastUsage.latencyStats;
             document.getElementById('p50Value').textContent = Math.round(ls.p50Ms) + 'ms';
@@ -438,9 +354,9 @@
 
         // Hourly Distribution
         const hourlyData = new Array(24).fill(0);
-        if (lastUsage && lastUsage.hourlyBreakdown) {
-            Object.entries(lastUsage.hourlyBreakdown).forEach(([hour, data]) => {
-                hourlyData[parseInt(hour)] = data.requestCount;
+        if (lastUsage && lastUsage.hourlyRequestCount) {
+            Object.entries(lastUsage.hourlyRequestCount).forEach(([hour, count]) => {
+                hourlyData[parseInt(hour)] = count;
             });
         }
         const peakHour = lastUsage ? lastUsage.peakHour : -1;
@@ -465,70 +381,6 @@
                 scales: { y: { beginAtZero: true } }
             }
         });
-
-        // Model Distribution
-        if (lastUsage && lastUsage.modelBreakdown) {
-            const modelData = Object.entries(lastUsage.modelBreakdown);
-            const modelColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-            new Chart(document.getElementById('modelPieChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: modelData.map(([name]) => name),
-                    datasets: [{
-                        data: modelData.map(([, data]) => data.requestCount),
-                        backgroundColor: modelColors.slice(0, modelData.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // Model List
-            const modelList = document.getElementById('modelList');
-            modelList.innerHTML = modelData.map(([name, data], i) =>
-                `<div class="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full" style="background-color: ${modelColors[i % modelColors.length]}"></span>
-                        <span class="truncate max-w-[100px]" title="${name}">${name}</span>
-                    </div>
-                    <span class="text-gray-600">${data.requestCount}</span>
-                </div>`
-            ).join('');
-        }
-
-        // Cost Breakdown
-        if (lastUsage && lastUsage.costBreakdown) {
-            const cb = lastUsage.costBreakdown;
-            new Chart(document.getElementById('costChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['Cost Breakdown'],
-                    datasets: [
-                        { label: 'Input', data: [cb.inputCost || 0], backgroundColor: 'rgba(59, 130, 246, 0.7)' },
-                        { label: 'Output', data: [cb.outputCost || 0], backgroundColor: 'rgba(16, 185, 129, 0.7)' },
-                        { label: 'Cache Read', data: [cb.cacheReadCost || 0], backgroundColor: 'rgba(139, 92, 246, 0.7)' },
-                        { label: 'Cache Write', data: [cb.cacheWriteCost || 0], backgroundColor: 'rgba(249, 115, 22, 0.7)' }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
-                }
-            });
-        } else {
-            new Chart(document.getElementById('costChart'), {
-                type: 'bar',
-                data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#e5e7eb' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
     </script>
 </div>
 </body>

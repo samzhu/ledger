@@ -23,6 +23,9 @@ import io.github.samzhu.ledger.dto.UsageEvent;
  * <p>文件 ID 格式：{@code {date}_{timestamp}_{uuid}}，
  * 例如 {@code 2025-12-10_1733817600000_abc12345}
  *
+ * <p>{@code processed} 欄位標記此批次是否已完成分析結算。
+ * 新建的批次預設為 {@code false}，完成聚合統計後更新為 {@code true}。
+ *
  * <p>成本效益分析（假設 Firestore 定價）：
  * <pre>
  * 每事件一文件：10,000 events × $0.18/100K writes = $0.018/day
@@ -38,7 +41,8 @@ public record RawEventBatch(
     LocalDate date,
     List<UsageEvent> events,
     int eventCount,
-    Instant createdAt
+    Instant createdAt,
+    boolean processed
 ) {
     /**
      * 從事件列表建立新的批次文件。
@@ -58,7 +62,7 @@ public record RawEventBatch(
         Instant now = Instant.now();
         String id = createId(date, now);
 
-        return new RawEventBatch(id, date, events, events.size(), now);
+        return new RawEventBatch(id, date, events, events.size(), now, false);
     }
 
     /**

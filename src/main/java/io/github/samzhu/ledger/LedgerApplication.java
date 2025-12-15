@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Ledger Service - LLM API 用量統計與成本追蹤服務。
@@ -32,6 +33,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @see <a href="https://docs.spring.io/spring-cloud-stream/reference/">Spring Cloud Stream</a>
  */
 @SpringBootApplication
+@EnableScheduling
 public class LedgerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(LedgerApplication.class);

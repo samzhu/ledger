@@ -1,9 +1,9 @@
 # Ledger: LLM 用量帳本服務 - 產品需求文件
 
 ## 文件資訊
-- **版本**: 1.2.0
+- **版本**: 1.3.0
 - **建立日期**: 2025-12-09
-- **最後更新**: 2025-12-09
+- **最後更新**: 2025-12-16
 - **專案名稱**: `ledger`
 - **完整名稱**: LLM Usage Ledger
 - **技術堆疊**: Spring Boot 3.5.8, Spring Data MongoDB, Spring Cloud Stream, Java 25, GraalVM Native
@@ -25,7 +25,7 @@
 | **資料庫存取** | Spring Data MongoDB | 透過 Firestore MongoDB 相容 API 存取 |
 | **訊息消費** | Spring Cloud Stream | 抽象層，本地用 RabbitMQ、GCP 用 Pub/Sub Binder |
 | **可觀測性** | Micrometer + Brave | Spring Boot 3.x 推薦配置 |
-| **排程任務** | 不在此服務 | 資料清理等排程由獨立服務或 Cloud Scheduler 處理 |
+| **排程任務** | @Scheduled | 使用 Spring 內建排程：Flush (每 30 分) + 結算 (每小時整點) |
 
 ---
 
@@ -145,24 +145,29 @@ Gate (LLM Gateway) 負責追蹤每次 API 呼叫的 Token 用量，並透過 Clo
 - 查看某用戶某天用量: 1 次讀取 (vs 原本 N 次)
 - 查看某模型某天用量: 1 次讀取 (vs 原本 M 次)
 
-#### 策略 2: 批量寫入 (Batch Writes)
+#### 策略 2: 批量寫入 + 延遲結算 (Batch Writes + Delayed Settlement)
 
-**問題**: 高頻事件導致大量寫入操作。
+**問題**: 高頻事件導致大量寫入和聚合操作。
 
-**解決方案**: 在記憶體中累積事件，定期批量寫入 Firestore。
+**解決方案**: 分離「寫入」和「結算」兩個階段。
 
-```java
-// 批量寫入配置
-usage-analytics:
+```yaml
+# 批量寫入配置
+ledger:
   batch:
-    size: 100          # 累積 100 筆後批量寫入
-    interval-ms: 5000  # 或每 5 秒寫入一次
+    size: 500                        # 累積 500 筆後批量寫入
+    flush-cron: "0 0,30 * * * *"     # 每小時 00 分和 30 分 flush
+    settlement-cron: "0 0 * * * *"   # 每小時整點結算
 ```
 
+**兩階段處理**:
+1. **Flush 階段**: 將事件批次儲存為 RawEventBatch (processed=false)
+2. **Settlement 階段**: 每小時整點查詢未結算批次，執行聚合統計，標記 processed=true
+
 **成本效益**:
-- Firestore 批量寫入最多 500 筆/次，每筆仍算一次寫入
-- 但可減少網路往返和連線開銷
-- 搭配聚合更新，可在同一批次中合併多次對同一聚合文件的更新
+- 寫入和聚合分離，提高寫入效能
+- 聚合失敗可自動重試（processed 仍為 false）
+- 支援批次重新處理（手動設回 processed=false）
 
 #### 策略 3: 冷熱資料分層
 
@@ -239,30 +244,40 @@ firestore/
 
 ### 4.2 Document Schema
 
-#### 4.2.1 原始事件 (raw_events) - 可選
+#### 4.2.1 原始事件批次 (raw_event_batches)
+
+**用途**: 批次儲存原始事件，支援延遲結算和重新處理。
 
 ```json
 {
-  "_id": "4c71578c899ae6249e5b70d07900fc93",
-  "userId": "user-uuid-12345",
-  "model": "claude-sonnet-4-5-20250929",
-  "messageId": "msg_016pGU1jGmczbq7p4JTfAqmn",
-  "inputTokens": 30,
-  "outputTokens": 148,
-  "cacheCreationTokens": 0,
-  "cacheReadTokens": 0,
-  "totalTokens": 178,
-  "latencyMs": 7257,
-  "stream": true,
-  "stopReason": "end_turn",
-  "status": "success",
-  "keyAlias": "primary",
-  "traceId": "4c71578c899ae6249e5b70d07900fc93",
-  "anthropicRequestId": "req_018EeWyXxfu5pfWkrYcMdjWG",
-  "timestamp": "2025-12-09T10:30:00.000Z",
-  "createdAt": "2025-12-09T10:30:01.234Z"
+  "_id": "2025-12-09_1733817600000_abc12345",
+  "date": "2025-12-09",
+  "events": [
+    {
+      "eventId": "4c71578c899ae6249e5b70d07900fc93",
+      "userId": "user-uuid-12345",
+      "model": "claude-sonnet-4-5-20250929",
+      "inputTokens": 30,
+      "outputTokens": 148,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "totalTokens": 178,
+      "latencyMs": 7257,
+      "status": "success",
+      "timestamp": "2025-12-09T10:30:00.000Z"
+    }
+    // ... 更多事件
+  ],
+  "eventCount": 500,
+  "createdAt": "2025-12-09T10:30:01.234Z",
+  "processed": false
 }
 ```
+
+| 欄位 | 說明 |
+|------|------|
+| `processed` | 是否已結算。Flush 時為 false，結算完成後標記為 true |
+| `eventCount` | 批次內事件數量 |
 
 #### 4.2.2 每日用戶聚合 (daily_user_usage)
 
@@ -681,10 +696,12 @@ ledger/
 │   ├── function/
 │   │   └── UsageEventFunction.java              # Spring Cloud Stream 消費者 (Function 風格)
 │   ├── service/
+│   │   ├── EventBufferService.java              # 事件緩衝服務 (Flush to MongoDB)
+│   │   ├── BatchSettlementService.java          # 批次結算服務 (每小時整點聚合)
 │   │   ├── UsageAggregationService.java         # 聚合計算服務
-│   │   ├── EventBufferService.java              # 事件緩衝服務 (含優雅關閉)
 │   │   ├── UsageQueryService.java               # 查詢服務
-│   │   └── CostCalculationService.java          # 成本計算服務
+│   │   ├── CostCalculationService.java          # 成本計算服務
+│   │   └── LatencyDigestService.java            # T-Digest 延遲百分位計算
 │   ├── repository/
 │   │   ├── DailyUserUsageRepository.java        # 用戶聚合存取 (Spring Data MongoDB)
 │   │   ├── DailyModelUsageRepository.java       # 模型聚合存取
@@ -1443,8 +1460,9 @@ spring:
 # 應用程式配置
 ledger:
   batch:
-    size: 100           # 累積 100 筆後批量寫入
-    interval-ms: 5000   # 或每 5 秒寫入一次
+    size: 500                        # 累積 500 筆後批量寫入
+    flush-cron: "0 0,30 * * * *"     # 每小時 00 分和 30 分 flush
+    settlement-cron: "0 0 * * * *"   # 每小時整點結算
   pricing:
     claude-sonnet-4:
       input-per-million: 3.00
@@ -1574,11 +1592,11 @@ public class MongoConfig {
 
 ## 7. 處理流程
 
-### 7.1 事件接收與聚合流程
+### 7.1 事件接收與聚合流程（兩階段處理）
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           事件處理流程                                        │
+│                        階段 1: 事件接收與 Flush                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   Pub/Sub / RabbitMQ         EventBufferService           MongoDB/Firestore│
@@ -1586,34 +1604,51 @@ public class MongoConfig {
 │   ┌─────────┐                ┌─────────────┐                               │
 │   │ Event 1 │───────────────▶│             │                               │
 │   └─────────┘                │   Event     │                               │
-│   ┌─────────┐   Spring       │   Buffer    │    達到 100 筆               │
-│   │ Event 2 │───Cloud ──────▶│             │────────或────────▶ bulkWrite │
-│   └─────────┘   Stream       │  (最多100)  │    每 5 秒                   │
+│   ┌─────────┐   Spring       │   Buffer    │    達到 500 筆               │
+│   │ Event 2 │───Cloud ──────▶│             │────────或────────▶ MongoDB   │
+│   └─────────┘   Stream       │  (最多500)  │ 每小時 00/30 分              │
 │       ...                    │             │                               │
-│   ┌─────────┐                │             │  ┌──────────────────┐        │
-│   │ Event N │───────────────▶│             │  │ SIGTERM 信號時   │        │
-│   └─────────┘                └──────┬──────┘  │ 強制 flush 所有  │        │
-│                                     │         │ 累積事件         │        │
-│                                     │         └──────────────────┘        │
-│                                     ▼                                      │
-│                         ┌─────────────────────┐                            │
-│                         │  UsageAggregation   │                            │
-│                         │  Service            │                            │
-│                         │                     │                            │
-│                         │  Aggregate by:      │                            │
-│                         │  - User + Date      │                            │
-│                         │  - Model + Date     │                            │
-│                         │  - User (summary)   │                            │
-│                         │  - System (daily)   │                            │
-│                         └─────────────────────┘                            │
-│                                    │                                        │
-│                                    ▼                                        │
-│                         ┌─────────────────────┐     ┌──────────────────┐  │
-│                         │   MongoDB bulkWrite │────▶│  daily_user_usage │  │
-│                         │   (UpdateOneModel   │     │  daily_model_usage│  │
-│                         │    + $inc 原子操作)  │     │  user_summary     │  │
-│                         └─────────────────────┘     │  system_stats     │  │
-│                                                     └──────────────────┘  │
+│   ┌─────────┐                │             │         ▼                     │
+│   │ Event N │───────────────▶│             │ ┌──────────────────┐          │
+│   └─────────┘                └──────┬──────┘ │ raw_event_batches │          │
+│                                     │        │ processed=false   │          │
+│                                     │        └──────────────────┘          │
+│                              SIGTERM │                                      │
+│                              flush所有                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        階段 2: 定時結算（每小時整點）                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   BatchSettlementService       UsageAggregationService    MongoDB/Firestore│
+│                                                                             │
+│   @Scheduled(cron="0 0 * * * *")                                           │
+│          │                                                                  │
+│          ▼                                                                  │
+│   ┌───────────────────┐                                                    │
+│   │ 查詢              │                                                    │
+│   │ processed=false   │                                                    │
+│   │ 的批次            │                                                    │
+│   └─────────┬─────────┘                                                    │
+│             │                                                               │
+│             ▼                                                               │
+│   ┌───────────────────┐        ┌─────────────────────┐                     │
+│   │ 每個批次呼叫      │───────▶│  Aggregate by:      │                     │
+│   │ processBatch()    │        │  - User + Date      │                     │
+│   └───────────────────┘        │  - Model + Date     │                     │
+│                                │  - User (quota)     │                     │
+│                                │  - System (daily)   │                     │
+│                                └──────────┬──────────┘                     │
+│                                           │                                 │
+│                                           ▼                                 │
+│   ┌───────────────────┐        ┌──────────────────┐                        │
+│   │ 標記              │◀───────│ daily_user_usage │                        │
+│   │ processed=true    │        │ daily_model_usage│                        │
+│   └───────────────────┘        │ user_quota       │                        │
+│                                │ system_stats     │                        │
+│                                └──────────────────┘                        │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1889,3 +1924,4 @@ spec:
 | 1.0.0 | 2025-12-09 | AI 助理 | 初始版本建立 |
 | 1.1.0 | 2025-12-09 | AI 助理 | 重大更新：使用 MongoDB Driver 存取 Firestore；透過 Spring Cloud Stream 消費 (Function 風格)；新增 EventBufferService 實作 SmartLifecycle 處理優雅關閉；移除排程功能 |
 | 1.2.0 | 2025-12-09 | AI 助理 | **專案命名為 Ledger**；降級至 Spring Boot 3.5.8 (穩定版)；改用 Spring Data MongoDB (spring-boot-starter-data-mongodb)；使用 Micrometer Brave (Spring Boot 3.x 推薦)；更新專案結構 (document/dto 分離)；MongoTemplate BulkOperations 取代原生 MongoDB Driver |
+| 1.3.0 | 2025-12-16 | AI 助理 | **兩階段處理架構重構**：(1) EventBufferService 改用 @Scheduled 取代 ScheduledExecutorService，程式碼更簡潔；(2) 新增 BatchSettlementService 負責每小時整點結算；(3) RawEventBatch 新增 `processed` 欄位追蹤結算狀態；(4) Flush 階段（每小時 00/30 分或累積 500 筆）只寫入原始批次，結算階段（每小時整點）執行聚合統計；(5) 新增 LatencyDigestService 支援 T-Digest 延遲百分位計算 |

@@ -1,5 +1,6 @@
 package io.github.samzhu.ledger.dto;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -10,6 +11,7 @@ import java.time.LocalDate;
  *   <li>{@code eventId} - CloudEvent id 屬性（唯一識別碼）</li>
  *   <li>{@code userId} - CloudEvent subject 屬性（用戶識別）</li>
  *   <li>{@code date} - CloudEvent time 屬性（轉換為 LocalDate）</li>
+ *   <li>{@code timestamp} - CloudEvent time 屬性（原始 Instant，用於小時分析）</li>
  *   <li>{@code data} - CloudEvent data payload（{@link UsageEventData}）</li>
  * </ul>
  *
@@ -29,6 +31,7 @@ public record UsageEvent(
     String eventId,
     String userId,
     LocalDate date,
+    Instant timestamp,
     UsageEventData data
 ) {
     /**

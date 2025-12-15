@@ -3,11 +3,231 @@
       th:replace="~{layout/main :: html(content=~{::content})}">
 <body>
 <div th:fragment="content">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">Model Usage</h1>
-
-    <div class="bg-white rounded-xl shadow p-6">
-        <p class="text-gray-500">Model usage analysis feature coming soon...</p>
+    <!-- Date Range Selection -->
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span th:text="${startDate} + ' ~ ' + ${endDate}">2025-12-01 ~ 2025-12-07</span>
+        </div>
+        <div class="flex gap-2">
+            <a th:href="@{/dashboard/models(days=7)}"
+               th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
+                7 Days
+            </a>
+            <a th:href="@{/dashboard/models(days=14)}"
+               th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
+                14 Days
+            </a>
+            <a th:href="@{/dashboard/models(days=30)}"
+               th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
+                30 Days
+            </a>
+        </div>
     </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Total Models -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Active Models</p>
+                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800" th:text="${models.size()}">0</p>
+        </div>
+
+        <!-- Total Requests -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Requests</p>
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(models.stream().mapToInt(m -> m.totalRequestCount()).sum(), 0, 'COMMA')}">0</p>
+        </div>
+
+        <!-- Total Tokens -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Tokens</p>
+                <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(models.stream().mapToLong(m -> m.totalTokens()).sum(), 0, 'COMMA')}">0</p>
+        </div>
+
+        <!-- Total Cost -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Cost</p>
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-green-600">
+                $<span th:text="${#numbers.formatDecimal(models.stream().map(m -> m.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Model Distribution Chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Token Distribution by Model</h3>
+            <canvas id="tokenDistChart" height="200"></canvas>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Cost Distribution by Model</h3>
+            <canvas id="costDistChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Model Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">All Models</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Success Rate</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Input Tokens</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Output Tokens</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tokens</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Latency</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr th:each="model, iterStat : ${models}" class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium"
+                                      th:classappend="${iterStat.index == 0} ? 'bg-yellow-100 text-yellow-700' : (${iterStat.index == 1} ? 'bg-gray-100 text-gray-700' : (${iterStat.index == 2} ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500'))"
+                                      th:text="${iterStat.index + 1}">1</span>
+                                <a th:href="@{/dashboard/models/{name}(name=${model.model()})}"
+                                   class="text-blue-600 hover:underline font-medium"
+                                   th:text="${model.model()}" th:title="${model.model()}">model-name</a>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm"
+                            th:text="${#numbers.formatInteger(model.totalRequestCount(), 0, 'COMMA')}">0</td>
+                        <td class="px-6 py-4 text-right text-sm">
+                            <span th:class="${model.successRate() >= 95} ? 'text-green-600' : (${model.successRate() >= 90} ? 'text-yellow-600' : 'text-red-600')"
+                                  th:text="${#numbers.formatDecimal(model.successRate(), 1, 1) + '%'}">98.5%</span>
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm"
+                            th:text="${#numbers.formatInteger(model.totalInputTokens(), 0, 'COMMA')}">0</td>
+                        <td class="px-6 py-4 text-right text-sm"
+                            th:text="${#numbers.formatInteger(model.totalOutputTokens(), 0, 'COMMA')}">0</td>
+                        <td class="px-6 py-4 text-right text-sm font-medium"
+                            th:text="${#numbers.formatInteger(model.totalTokens(), 0, 'COMMA')}">0</td>
+                        <td class="px-6 py-4 text-right text-sm"
+                            th:text="${#numbers.formatDecimal(model.avgLatencyMs(), 0, 0) + 'ms'}">0ms</td>
+                        <td class="px-6 py-4 text-right text-sm"
+                            th:text="${model.uniqueUsers()}">0</td>
+                        <td class="px-6 py-4 text-right text-sm text-green-600 font-medium">
+                            $<span th:text="${#numbers.formatDecimal(model.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(models)}">
+                        <td colspan="9" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center">
+                                <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-gray-500 text-sm">No model data available</p>
+                                <p class="text-gray-400 text-xs mt-1">Model usage will appear here once API calls are made</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script th:inline="javascript">
+        const models = /*[[${models}]]*/ [];
+        const modelColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
+        if (models.length > 0) {
+            // Token Distribution Pie Chart
+            new Chart(document.getElementById('tokenDistChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: models.map(m => m.model),
+                    datasets: [{
+                        data: models.map(m => m.totalTokens),
+                        backgroundColor: modelColors.slice(0, models.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Cost Distribution Pie Chart
+            new Chart(document.getElementById('costDistChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: models.map(m => m.model),
+                    datasets: [{
+                        data: models.map(m => m.totalEstimatedCostUsd),
+                        backgroundColor: modelColors.slice(0, models.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
 </div>
 </body>
 </html>

@@ -13,11 +13,11 @@ import org.springframework.stereotype.Service;
 import io.github.samzhu.ledger.document.DailyModelUsage;
 import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.SystemStats;
-import io.github.samzhu.ledger.document.UserSummary;
+import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.repository.DailyModelUsageRepository;
 import io.github.samzhu.ledger.repository.DailyUserUsageRepository;
 import io.github.samzhu.ledger.repository.SystemStatsRepository;
-import io.github.samzhu.ledger.repository.UserSummaryRepository;
+import io.github.samzhu.ledger.repository.UserQuotaRepository;
 
 /**
  * 用量統計查詢服務。
@@ -43,17 +43,17 @@ public class UsageQueryService {
 
     private final DailyUserUsageRepository dailyUserUsageRepository;
     private final DailyModelUsageRepository dailyModelUsageRepository;
-    private final UserSummaryRepository userSummaryRepository;
+    private final UserQuotaRepository userQuotaRepository;
     private final SystemStatsRepository systemStatsRepository;
 
     public UsageQueryService(
             DailyUserUsageRepository dailyUserUsageRepository,
             DailyModelUsageRepository dailyModelUsageRepository,
-            UserSummaryRepository userSummaryRepository,
+            UserQuotaRepository userQuotaRepository,
             SystemStatsRepository systemStatsRepository) {
         this.dailyUserUsageRepository = dailyUserUsageRepository;
         this.dailyModelUsageRepository = dailyModelUsageRepository;
-        this.userSummaryRepository = userSummaryRepository;
+        this.userQuotaRepository = userQuotaRepository;
         this.systemStatsRepository = systemStatsRepository;
     }
 
@@ -117,35 +117,56 @@ public class UsageQueryService {
     }
 
     /**
-     * 查詢用戶累計統計。
+     * 查詢用戶配額與累計統計。
      *
      * @param userId 用戶 ID
-     * @return 用戶統計（若存在）
+     * @return 用戶配額（若存在）
      */
-    public Optional<UserSummary> getUserSummary(String userId) {
-        log.debug("Querying user summary: userId={}", userId);
-        return userSummaryRepository.findById(userId);
+    public Optional<UserQuota> getUserQuota(String userId) {
+        log.debug("Querying user quota: userId={}", userId);
+        return userQuotaRepository.findById(userId);
     }
 
     /**
      * 查詢用量排行榜（依總 token 數）。
      *
      * @param limit 回傳筆數上限
-     * @return 排序後的用戶統計列表
+     * @return 排序後的用戶配額列表
      */
-    public List<UserSummary> getTopUsers(int limit) {
+    public List<UserQuota> getTopUsers(int limit) {
         log.debug("Querying top {} users by token usage", limit);
-        return userSummaryRepository.findAllByOrderByTotalTokensDesc(PageRequest.of(0, limit));
+        return userQuotaRepository.findAllByOrderByTotalTokensDesc(PageRequest.of(0, limit));
     }
 
     /**
-     * 查詢所有用戶統計。
+     * 查詢所有用戶配額。
      *
-     * @return 所有用戶的統計列表
+     * @return 所有用戶的配額列表
      */
-    public List<UserSummary> getAllUsers() {
+    public List<UserQuota> getAllUsers() {
         log.debug("Querying all users");
-        return userSummaryRepository.findAll();
+        return userQuotaRepository.findAll();
+    }
+
+    /**
+     * 查詢已超額的用戶。
+     *
+     * @return 已超額的用戶配額列表
+     */
+    public List<UserQuota> getExceededQuotaUsers() {
+        log.debug("Querying users with exceeded quota");
+        return userQuotaRepository.findByQuotaExceededTrue();
+    }
+
+    /**
+     * 查詢最近活躍用戶。
+     *
+     * @param limit 回傳筆數上限
+     * @return 依最近活動時間排序的用戶配額列表
+     */
+    public List<UserQuota> getRecentActiveUsers(int limit) {
+        log.debug("Querying {} recent active users", limit);
+        return userQuotaRepository.findAllByOrderByLastActiveAtDesc(PageRequest.of(0, limit));
     }
 
     /**
@@ -179,5 +200,95 @@ public class UsageQueryService {
             ids.add(date.toString());
         }
         return ids;
+    }
+
+    /**
+     * 取得所有使用過的模型清單（依 token 用量排序）。
+     *
+     * <p>從最近 N 天的 DailyModelUsage 聚合出不重複的模型列表。
+     *
+     * @param days 查詢天數
+     * @return 模型統計列表，按總 token 數降序排列
+     */
+    public List<ModelSummary> getAllModels(int days) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(days - 1);
+
+        log.debug("Querying all models for period: {} to {}", startDate, endDate);
+
+        // 查詢所有日期的模型用量
+        List<DailyModelUsage> allUsages = dailyModelUsageRepository.findAll();
+
+        // 過濾日期範圍並依模型聚合
+        java.util.Map<String, ModelSummary> modelMap = new java.util.HashMap<>();
+        for (DailyModelUsage usage : allUsages) {
+            if (usage.date() != null && !usage.date().isBefore(startDate) && !usage.date().isAfter(endDate)) {
+                modelMap.compute(usage.model(), (model, existing) -> {
+                    if (existing == null) {
+                        return new ModelSummary(
+                            model,
+                            usage.totalInputTokens(),
+                            usage.totalOutputTokens(),
+                            usage.totalTokens(),
+                            usage.requestCount(),
+                            usage.successCount(),
+                            usage.uniqueUsers(),
+                            usage.estimatedCostUsd(),
+                            usage.latencyStats() != null ? usage.latencyStats().avgLatencyMs() : 0.0
+                        );
+                    } else {
+                        return new ModelSummary(
+                            model,
+                            existing.totalInputTokens() + usage.totalInputTokens(),
+                            existing.totalOutputTokens() + usage.totalOutputTokens(),
+                            existing.totalTokens() + usage.totalTokens(),
+                            existing.totalRequestCount() + usage.requestCount(),
+                            existing.totalSuccessCount() + usage.successCount(),
+                            Math.max(existing.uniqueUsers(), usage.uniqueUsers()),
+                            existing.totalEstimatedCostUsd().add(usage.estimatedCostUsd()),
+                            (existing.avgLatencyMs() + (usage.latencyStats() != null ? usage.latencyStats().avgLatencyMs() : 0.0)) / 2
+                        );
+                    }
+                });
+            }
+        }
+
+        List<ModelSummary> result = new ArrayList<>(modelMap.values());
+        result.sort((a, b) -> Long.compare(b.totalTokens(), a.totalTokens()));
+
+        log.info("Found {} models for period {} to {}", result.size(), startDate, endDate);
+        return result;
+    }
+
+    /**
+     * 模型統計摘要。
+     *
+     * @param model 模型名稱
+     * @param totalInputTokens 總輸入 token
+     * @param totalOutputTokens 總輸出 token
+     * @param totalTokens 總 token
+     * @param totalRequestCount 總請求數
+     * @param totalSuccessCount 總成功數
+     * @param uniqueUsers 獨立用戶數
+     * @param totalEstimatedCostUsd 總成本
+     * @param avgLatencyMs 平均延遲
+     */
+    public record ModelSummary(
+        String model,
+        long totalInputTokens,
+        long totalOutputTokens,
+        long totalTokens,
+        int totalRequestCount,
+        int totalSuccessCount,
+        int uniqueUsers,
+        java.math.BigDecimal totalEstimatedCostUsd,
+        double avgLatencyMs
+    ) {
+        /**
+         * 計算成功率。
+         */
+        public double successRate() {
+            return totalRequestCount > 0 ? (double) totalSuccessCount / totalRequestCount * 100.0 : 0.0;
+        }
     }
 }

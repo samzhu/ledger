@@ -2,6 +2,7 @@ package io.github.samzhu.ledger.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import io.github.samzhu.ledger.config.LedgerProperties;
 import io.github.samzhu.ledger.config.LedgerProperties.ModelPricing;
+import io.github.samzhu.ledger.document.DailyUserUsage.CostBreakdown;
 import io.github.samzhu.ledger.dto.UsageEvent;
 
 /**
@@ -95,6 +97,102 @@ public class CostCalculationService {
         return BigDecimal.valueOf(tokens)
             .multiply(pricePerMillion)
             .divide(ONE_MILLION, 6, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 計算批次事件的總成本。
+     *
+     * @param events 用量事件列表
+     * @return 批次總成本（美元）
+     */
+    public BigDecimal calculateBatchCost(List<UsageEvent> events) {
+        return events.stream()
+            .map(this::calculateCost)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 計算 Cache 節省的成本。
+     *
+     * <p>計算如果沒有 Prompt Cache，需要多付的成本。
+     * 節省金額 = (cacheReadTokens × inputPrice) - (cacheReadTokens × cacheReadPrice)
+     *
+     * @param events 用量事件列表
+     * @return 因 Cache 節省的成本（美元）
+     */
+    public BigDecimal calculateCacheSavings(List<UsageEvent> events) {
+        return events.stream()
+            .map(this::calculateSingleEventCacheSavings)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 計算單筆事件的 Cache 節省成本。
+     */
+    private BigDecimal calculateSingleEventCacheSavings(UsageEvent event) {
+        ModelPricing pricing = findPricing(event.model());
+        if (pricing == null || event.cacheReadTokens() <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        // 如果沒有 cache，需要付的 input 成本
+        BigDecimal fullInputCost = BigDecimal.valueOf(event.cacheReadTokens())
+            .multiply(pricing.inputPerMillion())
+            .divide(ONE_MILLION, 6, RoundingMode.HALF_UP);
+
+        // 實際 cache read 成本
+        BigDecimal cacheReadCost = BigDecimal.valueOf(event.cacheReadTokens())
+            .multiply(pricing.cacheReadPerMillion())
+            .divide(ONE_MILLION, 6, RoundingMode.HALF_UP);
+
+        return fullInputCost.subtract(cacheReadCost);
+    }
+
+    /**
+     * 計算成本細分。
+     *
+     * <p>將總成本拆分為各類別：輸入、輸出、Cache 讀取、Cache 寫入。
+     *
+     * @param events 用量事件列表
+     * @return 成本細分
+     */
+    public CostBreakdown calculateCostBreakdown(List<UsageEvent> events) {
+        BigDecimal inputCost = BigDecimal.ZERO;
+        BigDecimal outputCost = BigDecimal.ZERO;
+        BigDecimal cacheReadCost = BigDecimal.ZERO;
+        BigDecimal cacheWriteCost = BigDecimal.ZERO;
+
+        for (UsageEvent event : events) {
+            ModelPricing pricing = findPricing(event.model());
+            if (pricing == null) {
+                continue;
+            }
+
+            // Billable input = input - cacheRead
+            int billableInput = event.inputTokens() - event.cacheReadTokens();
+
+            inputCost = inputCost.add(
+                BigDecimal.valueOf(billableInput)
+                    .multiply(pricing.inputPerMillion())
+                    .divide(ONE_MILLION, 6, RoundingMode.HALF_UP));
+
+            outputCost = outputCost.add(
+                BigDecimal.valueOf(event.outputTokens())
+                    .multiply(pricing.outputPerMillion())
+                    .divide(ONE_MILLION, 6, RoundingMode.HALF_UP));
+
+            cacheReadCost = cacheReadCost.add(
+                BigDecimal.valueOf(event.cacheReadTokens())
+                    .multiply(pricing.cacheReadPerMillion())
+                    .divide(ONE_MILLION, 6, RoundingMode.HALF_UP));
+
+            cacheWriteCost = cacheWriteCost.add(
+                BigDecimal.valueOf(event.cacheCreationTokens())
+                    .multiply(pricing.cacheWritePerMillion())
+                    .divide(ONE_MILLION, 6, RoundingMode.HALF_UP));
+        }
+
+        return new CostBreakdown(inputCost, outputCost, cacheReadCost, cacheWriteCost);
     }
 
     /**

@@ -46,4 +46,13 @@ public interface RawEventBatchRepository extends MongoRepository<RawEventBatch, 
      * @return 符合條件的批次列表，依建立時間升序排列
      */
     List<RawEventBatch> findByDateBetweenOrderByCreatedAtAsc(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 查詢尚未結算的批次，依建立時間排序。
+     *
+     * <p>用於定時結算任務，取得需要聚合處理的批次。
+     *
+     * @return 未結算的批次列表，依建立時間升序排列
+     */
+    List<RawEventBatch> findByProcessedFalseOrderByCreatedAtAsc();
 }

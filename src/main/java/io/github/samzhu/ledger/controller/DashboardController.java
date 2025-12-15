@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import io.github.samzhu.ledger.document.DailyModelUsage;
 import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.SystemStats;
-import io.github.samzhu.ledger.document.UserSummary;
+import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.service.UsageQueryService;
+import io.github.samzhu.ledger.service.UsageQueryService.ModelSummary;
 
 /**
  * 儀表板 UI 控制器。
@@ -61,7 +63,7 @@ public class DashboardController {
         LocalDate startDate = endDate.minusDays(days - 1);
 
         List<SystemStats> stats = queryService.getSystemDailyStats(startDate, endDate);
-        List<UserSummary> topUsers = queryService.getTopUsers(10);
+        List<UserQuota> topUsers = queryService.getTopUsers(10);
 
         model.addAttribute("currentPage", "overview");
         model.addAttribute("pageTitle", "System Overview");
@@ -88,7 +90,7 @@ public class DashboardController {
     public String users(Model model) {
         log.info("Dashboard request: users");
 
-        List<UserSummary> users = queryService.getAllUsers();
+        List<UserQuota> users = queryService.getAllUsers();
 
         model.addAttribute("currentPage", "users");
         model.addAttribute("pageTitle", "User Usage");
@@ -120,13 +122,13 @@ public class DashboardController {
         LocalDate startDate = endDate.minusDays(days - 1);
 
         List<DailyUserUsage> usages = queryService.getUserDailyUsage(userId, startDate, endDate);
-        UserSummary summary = queryService.getUserSummary(userId).orElse(null);
+        UserQuota quota = queryService.getUserQuota(userId).orElse(null);
 
         model.addAttribute("currentPage", "users");
         model.addAttribute("pageTitle", "User: " + userId);
         model.addAttribute("userId", userId);
         model.addAttribute("usages", usages);
-        model.addAttribute("summary", summary);
+        model.addAttribute("quota", quota);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
         model.addAttribute("days", days);
@@ -139,6 +141,8 @@ public class DashboardController {
     /**
      * 模型用量頁面。
      *
+     * <p>顯示所有 LLM 模型的使用統計列表。
+     *
      * @param model Spring MVC Model
      * @param days 顯示天數（預設 7 天）
      * @return 視圖名稱
@@ -149,10 +153,74 @@ public class DashboardController {
 
         log.info("Dashboard request: models, days={}", days);
 
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(days - 1);
+
+        List<ModelSummary> modelSummaries = queryService.getAllModels(days);
+
         model.addAttribute("currentPage", "models");
         model.addAttribute("pageTitle", "Model Usage");
+        model.addAttribute("models", modelSummaries);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
         model.addAttribute("days", days);
 
+        log.debug("Models page loaded: {} models", modelSummaries.size());
+
         return "dashboard/models";
+    }
+
+    /**
+     * 模型詳情頁面。
+     *
+     * <p>顯示單一模型的詳細用量統計和趨勢圖表。
+     *
+     * @param modelName 模型名稱
+     * @param days 顯示天數（預設 7 天）
+     * @param model Spring MVC Model
+     * @return 視圖名稱
+     */
+    @GetMapping("/models/{modelName}")
+    public String modelDetail(@PathVariable String modelName,
+            @RequestParam(defaultValue = "7") int days,
+            Model model) {
+
+        log.info("Dashboard request: modelDetail modelName={}, days={}", modelName, days);
+
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(days - 1);
+
+        List<DailyModelUsage> usages = queryService.getModelDailyUsage(modelName, startDate, endDate);
+
+        // 計算摘要統計
+        long totalInputTokens = usages.stream().mapToLong(DailyModelUsage::totalInputTokens).sum();
+        long totalOutputTokens = usages.stream().mapToLong(DailyModelUsage::totalOutputTokens).sum();
+        long totalTokens = usages.stream().mapToLong(DailyModelUsage::totalTokens).sum();
+        int totalRequests = usages.stream().mapToInt(DailyModelUsage::requestCount).sum();
+        int totalSuccess = usages.stream().mapToInt(DailyModelUsage::successCount).sum();
+        int maxUniqueUsers = usages.stream().mapToInt(DailyModelUsage::uniqueUsers).max().orElse(0);
+        java.math.BigDecimal totalCost = usages.stream()
+            .map(DailyModelUsage::estimatedCostUsd)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        model.addAttribute("currentPage", "models");
+        model.addAttribute("pageTitle", "Model: " + modelName);
+        model.addAttribute("modelName", modelName);
+        model.addAttribute("usages", usages);
+        model.addAttribute("totalInputTokens", totalInputTokens);
+        model.addAttribute("totalOutputTokens", totalOutputTokens);
+        model.addAttribute("totalTokens", totalTokens);
+        model.addAttribute("totalRequests", totalRequests);
+        model.addAttribute("totalSuccess", totalSuccess);
+        model.addAttribute("uniqueUsers", maxUniqueUsers);
+        model.addAttribute("totalCost", totalCost);
+        model.addAttribute("successRate", totalRequests > 0 ? (double) totalSuccess / totalRequests * 100.0 : 0.0);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
+        model.addAttribute("days", days);
+
+        log.debug("Model detail loaded: modelName={}, {} daily records", modelName, usages.size());
+
+        return "dashboard/model-detail";
     }
 }

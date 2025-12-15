@@ -49,8 +49,9 @@ spring:
 # 應用程式配置
 ledger:
   batch:
-    size: 100           # 累積 100 筆後批量寫入
-    interval-ms: 5000   # 或每 5 秒寫入一次
+    size: 500                        # 累積 500 筆後批量寫入
+    flush-cron: "0 0,30 * * * *"      # 每小時 00 分和 30 分刷新
+    settlement-cron: "0 0 * * * *"    # 每小時整點結算
   pricing:
     # Claude Sonnet 4
     claude-sonnet-4-20250514:
@@ -70,6 +71,14 @@ ledger:
       output-per-million: 4.00
       cache-read-per-million: 0.08
       cache-write-per-million: 1.00
+  # 延遲百分位計算設定
+  latency:
+    digest-compression: 100   # T-Digest 壓縮因子 (50-200)，值越高精度越高但記憶體使用越多
+  # 預設配額設定
+  quota:
+    default-token-limit: 0           # 預設 Token 限制，0 表示無限制
+    default-cost-limit-usd: 0        # 預設成本限制 (USD)，0 表示無限制
+    default-period: MONTHLY          # 配額週期：DAILY, WEEKLY, MONTHLY
 
 # 優雅關閉
 server:

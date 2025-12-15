@@ -1,5 +1,6 @@
 package io.github.samzhu.ledger.function;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.function.Consumer;
@@ -85,19 +86,22 @@ public class UsageEventFunction {
                 // Payload 由 Spring 自動轉換為 UsageEventData
                 UsageEventData data = message.getPayload();
 
+                Instant timestamp = time != null ? time.toInstant() : Instant.now();
                 UsageEvent event = new UsageEvent(
                     eventId,
                     subject,  // userId 在 CE subject 中
                     time != null ? time.toLocalDate() : LocalDate.now(),
+                    timestamp,
                     data
                 );
 
                 bufferService.addEvent(event);
 
-                log.info("Event consumed: eventId={}, userId={}, model={}, tokens={}",
+                log.debug("Event consumed: eventId={}, userId={}, model={}, tokens={}",
                     eventId, subject, data.model(), data.totalTokens());
             } catch (Exception e) {
-                log.error("Failed to process CloudEvent: {}", e.getMessage(), e);
+                log.error("Failed to process CloudEvent: eventId={}, error={}",
+                    CloudEventMessageUtils.getId(message), e.getMessage(), e);
                 // 不重新拋出例外，避免訊息重複投遞
             }
         };

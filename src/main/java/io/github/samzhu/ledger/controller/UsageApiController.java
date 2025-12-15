@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.samzhu.ledger.document.DailyModelUsage;
 import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.SystemStats;
-import io.github.samzhu.ledger.document.UserSummary;
+import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.dto.api.DailyUsage;
 import io.github.samzhu.ledger.dto.api.DatePeriod;
 import io.github.samzhu.ledger.dto.api.ModelUsageResponse;
@@ -169,7 +169,7 @@ public class UsageApiController {
         log.info("API request: getSystemDailyUsage period={} to {}", startDate, endDate);
 
         List<SystemStats> stats = queryService.getSystemDailyStats(startDate, endDate);
-        List<UserSummary> topUsers = queryService.getTopUsers(10);
+        List<UserQuota> topUsers = queryService.getTopUsers(10);
 
         List<DailyUsage> daily = stats.stream()
             .map(s -> new DailyUsage(
@@ -209,38 +209,38 @@ public class UsageApiController {
     }
 
     /**
-     * 查詢所有用戶統計。
+     * 查詢所有用戶配額與統計。
      *
      * <p>端點：{@code GET /api/v1/usage/users}
      *
-     * @return 所有用戶的累計統計列表
+     * @return 所有用戶的配額與累計統計列表
      */
     @GetMapping("/users")
-    public ResponseEntity<List<UserSummary>> getAllUsers() {
+    public ResponseEntity<List<UserQuota>> getAllUsers() {
         log.info("API request: getAllUsers");
-        List<UserSummary> users = queryService.getAllUsers();
+        List<UserQuota> users = queryService.getAllUsers();
         log.debug("getAllUsers response: {} users", users.size());
         return ResponseEntity.ok(users);
     }
 
     /**
-     * 查詢單一用戶統計。
+     * 查詢單一用戶配額與統計。
      *
      * <p>端點：{@code GET /api/v1/usage/users/{userId}}
      *
      * @param userId 用戶 ID
-     * @return 用戶累計統計，若不存在回傳 404
+     * @return 用戶配額與累計統計，若不存在回傳 404
      */
     @GetMapping("/users/{userId}")
-    public ResponseEntity<UserSummary> getUserSummary(@PathVariable String userId) {
-        log.info("API request: getUserSummary userId={}", userId);
-        return queryService.getUserSummary(userId)
-            .map(summary -> {
-                log.debug("getUserSummary found: userId={}, totalTokens={}", userId, summary.totalTokens());
-                return ResponseEntity.ok(summary);
+    public ResponseEntity<UserQuota> getUserQuota(@PathVariable String userId) {
+        log.info("API request: getUserQuota userId={}", userId);
+        return queryService.getUserQuota(userId)
+            .map(quota -> {
+                log.debug("getUserQuota found: userId={}, totalTokens={}", userId, quota.totalTokens());
+                return ResponseEntity.ok(quota);
             })
             .orElseGet(() -> {
-                log.debug("getUserSummary not found: userId={}", userId);
+                log.debug("getUserQuota not found: userId={}", userId);
                 return ResponseEntity.notFound().build();
             });
     }

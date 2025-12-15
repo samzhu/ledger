@@ -3,108 +3,351 @@
       th:replace="~{layout/main :: html(content=~{::content})}">
 <body>
 <div th:fragment="content">
-    <!-- Title & Date Selection -->
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">System Overview</h1>
+    <!-- Date Range Selection -->
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span th:text="${startDate} + ' ~ ' + ${endDate}">2025-12-01 ~ 2025-12-07</span>
+        </div>
         <div class="flex gap-2">
             <a th:href="@{/dashboard(days=7)}"
-               th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
-               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+               th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 7 Days
             </a>
             <a th:href="@{/dashboard(days=14)}"
-               th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
-               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+               th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 14 Days
             </a>
             <a th:href="@{/dashboard(days=30)}"
-               th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
-               class="px-4 py-2 rounded-lg shadow hover:shadow-md transition">
+               th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+               class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 30 Days
             </a>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow p-6">
-            <p class="text-gray-500 text-sm">Total Requests</p>
-            <p class="text-3xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(stats.stream().mapToInt(s -> s.totalRequestCount()).sum(), 0, 'COMMA')}">
-                0
-            </p>
+    <!-- Statistics Cards (6 cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <!-- Total Requests -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Requests</p>
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(stats.stream().mapToInt(s -> s.totalRequestCount()).sum(), 0, 'COMMA')}">0</p>
+            <div class="mt-2 flex items-center gap-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                      th:classappend="${stats.isEmpty()} ? 'bg-gray-100 text-gray-600' : (stats.get(stats.size()-1).successRate() >= 95 ? 'bg-green-100 text-green-700' : (stats.get(stats.size()-1).successRate() >= 90 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'))">
+                    <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.get(stats.size()-1).successRate(), 1, 1) + '%'}">98.5%</span>
+                    <span th:if="${stats.isEmpty()}">N/A</span>
+                    success
+                </span>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow p-6">
-            <p class="text-gray-500 text-sm">Total Tokens</p>
-            <p class="text-3xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(stats.stream().mapToLong(s -> s.totalTokens()).sum(), 0, 'COMMA')}">
-                0
-            </p>
+
+        <!-- Total Tokens -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Tokens</p>
+                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800"
+               th:text="${#numbers.formatInteger(stats.stream().mapToLong(s -> s.totalTokens()).sum(), 0, 'COMMA')}">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span th:text="'In: ' + #numbers.formatInteger(stats.stream().mapToLong(s -> s.totalInputTokens()).sum(), 0, 'COMMA')">In: 0</span>
+                <span class="mx-1">|</span>
+                <span th:text="'Out: ' + #numbers.formatInteger(stats.stream().mapToLong(s -> s.totalOutputTokens()).sum(), 0, 'COMMA')">Out: 0</span>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow p-6">
-            <p class="text-gray-500 text-sm">Estimated Cost</p>
-            <p class="text-3xl font-bold text-green-600">
+
+        <!-- Estimated Cost -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Estimated Cost</p>
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-green-600">
                 $<span th:text="${#numbers.formatDecimal(stats.stream().map(s -> s.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
             </p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span th:text="'Avg: $' + #numbers.formatDecimal(stats.isEmpty() ? 0 : stats.stream().map(s -> s.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)).divide(T(java.math.BigDecimal).valueOf(stats.size()), 2, T(java.math.RoundingMode).HALF_UP), 1, 2) + '/day'">Avg: $0.00/day</span>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow p-6">
-            <p class="text-gray-500 text-sm">Active Users</p>
-            <p class="text-3xl font-bold text-gray-800" th:text="${topUsers.size()}">0</p>
+
+        <!-- Unique Users -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Unique Users</p>
+                <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800" th:text="${topUsers.size()}">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span>Active in period</span>
+            </div>
+        </div>
+
+        <!-- Average Latency -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Avg Latency</p>
+                <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-800">
+                <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.stream().mapToDouble(s -> s.avgLatencyMs()).average().orElse(0), 0, 0)}">0</span>
+                <span th:if="${stats.isEmpty()}">0</span>
+                <span class="text-sm font-normal text-gray-500">ms</span>
+            </p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span th:if="${!stats.isEmpty()}" th:text="'P50: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p50LatencyMs()).average().orElse(0), 0, 0) + 'ms'">P50: 0ms</span>
+                <span class="mx-1">|</span>
+                <span th:if="${!stats.isEmpty()}" th:text="'P90: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p90LatencyMs()).average().orElse(0), 0, 0) + 'ms'">P90: 0ms</span>
+            </div>
+        </div>
+
+        <!-- Cache Savings -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Cache Savings</p>
+                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-emerald-600">
+                $<span th:text="${#numbers.formatDecimal(stats.stream().map(s -> s.systemCacheSavedUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+            </p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span th:if="${!stats.isEmpty()}" th:text="'Hit Rate: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100, 1, 1) + '%'">Hit Rate: 0%</span>
+            </div>
         </div>
     </div>
 
-    <!-- Trend Chart -->
-    <div class="bg-white rounded-xl shadow p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4">Daily Usage Trend</h2>
-        <canvas id="dailyChart" height="100"></canvas>
+    <!-- System Health & Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- System Health -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">System Health</h3>
+
+            <!-- Success Rate -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600">Success Rate</span>
+                    <span class="text-sm font-medium"
+                          th:classappend="${stats.isEmpty()} ? 'text-gray-500' : (stats.get(stats.size()-1).successRate() >= 95 ? 'text-green-600' : (stats.get(stats.size()-1).successRate() >= 90 ? 'text-yellow-600' : 'text-red-600'))">
+                        <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.get(stats.size()-1).successRate(), 1, 1) + '%'}">98.5%</span>
+                        <span th:if="${stats.isEmpty()}">N/A</span>
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div class="h-2.5 rounded-full transition-all duration-500"
+                         th:classappend="${stats.isEmpty()} ? 'bg-gray-400' : (stats.get(stats.size()-1).successRate() >= 95 ? 'bg-green-500' : (stats.get(stats.size()-1).successRate() >= 90 ? 'bg-yellow-500' : 'bg-red-500'))"
+                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + stats.get(stats.size()-1).successRate() + '%'"></div>
+                </div>
+            </div>
+
+            <!-- Cache Hit Rate -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600">Cache Hit Rate</span>
+                    <span class="text-sm font-medium text-cyan-600"
+                          th:text="${stats.isEmpty()} ? 'N/A' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100, 1, 1) + '%'">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div class="bg-cyan-500 h-2.5 rounded-full transition-all duration-500"
+                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + (stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100) + '%'"></div>
+                </div>
+            </div>
+
+            <!-- Latency Percentiles -->
+            <div class="mt-6">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Latency Percentiles</h4>
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">P50</p>
+                        <p class="text-sm font-semibold text-gray-800"
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p50LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">P90</p>
+                        <p class="text-sm font-semibold text-gray-800"
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p90LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">P99</p>
+                        <p class="text-sm font-semibold text-orange-600"
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p99LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">Avg</p>
+                        <p class="text-sm font-semibold text-gray-800"
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.avgLatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Usage Trend Chart -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Daily Usage Trend</h3>
+                <div class="flex items-center gap-4 text-xs">
+                    <span class="flex items-center gap-1">
+                        <span class="w-3 h-3 bg-blue-500 rounded"></span> Tokens
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <span class="w-3 h-3 bg-green-500 rounded"></span> Success Rate
+                    </span>
+                </div>
+            </div>
+            <canvas id="dailyChart" height="120"></canvas>
+        </div>
     </div>
 
-    <!-- Top Users -->
-    <div class="bg-white rounded-xl shadow p-6">
-        <h2 class="text-xl font-semibold mb-4">Top 10 Users</h2>
-        <table class="w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">User</th>
-                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Requests</th>
-                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Tokens</th>
-                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">Cost</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                <tr th:each="user : ${topUsers}" class="hover:bg-gray-50">
-                    <td class="px-4 py-3">
-                        <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                           class="text-blue-600 hover:underline"
-                           th:text="${user.userId}">user-id</a>
-                    </td>
-                    <td class="px-4 py-3 text-right"
-                        th:text="${#numbers.formatInteger(user.totalRequestCount(), 0, 'COMMA')}">0</td>
-                    <td class="px-4 py-3 text-right"
-                        th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
-                    <td class="px-4 py-3 text-right text-green-600">
-                        $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(topUsers)}">
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                        No user data available
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Hourly Distribution -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Hourly Distribution (Last Day)</h3>
+            <div th:if="${!stats.isEmpty()}" class="flex items-center gap-2">
+                <span class="text-sm text-gray-500">Peak Hour:</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
+                      th:text="${stats.get(stats.size()-1).peakHour() + ':00'} + ' (' + ${stats.get(stats.size()-1).peakHourRequests()} + ' requests)'">14:00 (150 requests)</span>
+            </div>
+        </div>
+        <canvas id="hourlyChart" height="80"></canvas>
+    </div>
+
+    <!-- Leaderboards -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top Users -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Top Users</h3>
+                <a th:href="@{/dashboard/users}" class="text-sm text-blue-600 hover:text-blue-800">View All</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr th:each="user, iterStat : ${topUsers}" class="hover:bg-gray-50">
+                            <td class="px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium"
+                                          th:classappend="${iterStat.index == 0} ? 'bg-yellow-100 text-yellow-700' : (${iterStat.index == 1} ? 'bg-gray-100 text-gray-700' : (${iterStat.index == 2} ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500'))"
+                                          th:text="${iterStat.index + 1}">1</span>
+                                    <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
+                                       class="text-sm text-blue-600 hover:underline font-medium truncate max-w-[120px]"
+                                       th:text="${user.userId}" th:title="${user.userId}">user-id</a>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-right text-sm"
+                                th:text="${#numbers.formatInteger(user.totalRequestCount(), 0, 'COMMA')}">0</td>
+                            <td class="px-3 py-2 text-right text-sm"
+                                th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
+                            <td class="px-3 py-2 text-right text-sm text-green-600">
+                                $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(topUsers)}">
+                            <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
+                                No user data available
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Models -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Top Models</h3>
+                <a th:href="@{/dashboard/models}" class="text-sm text-blue-600 hover:text-blue-800">View All</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr th:if="${!stats.isEmpty()}" th:each="model, iterStat : ${stats.get(stats.size()-1).topModels()}" class="hover:bg-gray-50">
+                            <td class="px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium"
+                                          th:classappend="${iterStat.index == 0} ? 'bg-purple-100 text-purple-700' : (${iterStat.index == 1} ? 'bg-gray-100 text-gray-700' : (${iterStat.index == 2} ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-50 text-gray-500'))"
+                                          th:text="${iterStat.index + 1}">1</span>
+                                    <a th:href="@{/dashboard/models/{id}(id=${model.id()})}"
+                                       class="text-sm text-blue-600 hover:underline font-medium truncate max-w-[150px]"
+                                       th:text="${model.id()}" th:title="${model.id()}">model-name</a>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-right text-sm"
+                                th:text="${#numbers.formatInteger(model.requestCount(), 0, 'COMMA')}">0</td>
+                            <td class="px-3 py-2 text-right text-sm"
+                                th:text="${#numbers.formatInteger(model.totalTokens(), 0, 'COMMA')}">0</td>
+                            <td class="px-3 py-2 text-right text-sm text-green-600">
+                                $<span th:text="${#numbers.formatDecimal(model.costUsd(), 1, 2)}">0.00</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${stats.isEmpty() || stats.get(stats.size()-1).topModels() == null || stats.get(stats.size()-1).topModels().isEmpty()}">
+                            <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
+                                No model data available
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- Chart.js Initialization -->
     <script th:inline="javascript">
-        const stats = [[${stats}]];
+        const stats = /*[[${stats}]]*/ [];
 
-        const labels = stats.map(s => s.date).sort();
-        const tokenData = stats.sort((a, b) => a.date.localeCompare(b.date))
-                               .map(s => s.totalTokens);
-        const requestData = stats.sort((a, b) => a.date.localeCompare(b.date))
-                                 .map(s => s.totalRequestCount);
+        // Sort stats by date
+        const sortedStats = [...stats].sort((a, b) => a.date.localeCompare(b.date));
+        const labels = sortedStats.map(s => s.date);
+        const tokenData = sortedStats.map(s => s.totalTokens);
+        const successRateData = sortedStats.map(s => s.successRate);
 
+        // Daily Usage Trend Chart (Mixed: Bar + Line)
         new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: {
@@ -115,19 +358,111 @@
                         data: tokenData,
                         backgroundColor: 'rgba(59, 130, 246, 0.5)',
                         borderColor: 'rgb(59, 130, 246)',
-                        borderWidth: 1
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Success Rate',
+                        data: successRateData,
+                        type: 'line',
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y1'
                     }
                 ]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
                 scales: {
                     y: {
+                        type: 'linear',
+                        position: 'left',
                         beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
                         ticks: {
                             callback: function(value) {
                                 return value.toLocaleString();
                             }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        min: 0,
+                        max: 100,
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Hourly Distribution Chart
+        const lastDayStats = sortedStats.length > 0 ? sortedStats[sortedStats.length - 1] : null;
+        const hourlyData = new Array(24).fill(0);
+        const peakHour = lastDayStats ? lastDayStats.peakHour : -1;
+
+        if (lastDayStats && lastDayStats.hourlyRequestCount) {
+            Object.entries(lastDayStats.hourlyRequestCount).forEach(([hour, count]) => {
+                hourlyData[parseInt(hour)] = count;
+            });
+        }
+
+        new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                datasets: [{
+                    label: 'Requests',
+                    data: hourlyData,
+                    backgroundColor: hourlyData.map((_, i) =>
+                        i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(59, 130, 246, 0.5)'
+                    ),
+                    borderColor: hourlyData.map((_, i) =>
+                        i === peakHour ? 'rgb(249, 115, 22)' : 'rgb(59, 130, 246)'
+                    ),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
                 }

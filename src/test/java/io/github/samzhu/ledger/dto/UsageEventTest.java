@@ -84,10 +84,12 @@ class UsageEventTest {
         );
 
         // When
+        java.time.Instant timestamp = java.time.Instant.now();
         UsageEvent event = new UsageEvent(
             "event-123",
             "user-456",
             date,
+            timestamp,
             data
         );
 
@@ -131,6 +133,6 @@ class UsageEventTest {
             "trace-1",
             "req-1"
         );
-        return new UsageEvent("event-1", "user-1", LocalDate.now(), data);
+        return new UsageEvent("event-1", "user-1", LocalDate.now(), java.time.Instant.now(), data);
     }
 }
