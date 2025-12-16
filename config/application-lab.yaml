@@ -34,7 +34,8 @@ management:
     web:
       exposure:
         # 注意: 移除 env,configprops 避免洩漏 secrets
-        include: health,info,metrics,prometheus,scheduledtasks
+        include: "*"                                                                                                                                       
+        exclude: env,configprops
 
 # 日誌 - DEBUG 便於開發
 logging:
