@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +25,7 @@ import io.github.samzhu.ledger.dto.api.ModelUsageResponse;
 import io.github.samzhu.ledger.dto.api.SystemUsageResponse;
 import io.github.samzhu.ledger.dto.api.UsageSummary;
 import io.github.samzhu.ledger.dto.api.UserUsageResponse;
+import io.github.samzhu.ledger.service.BatchSettlementService;
 import io.github.samzhu.ledger.service.UsageQueryService;
 
 /**
@@ -47,9 +49,11 @@ public class UsageApiController {
     private static final Logger log = LoggerFactory.getLogger(UsageApiController.class);
 
     private final UsageQueryService queryService;
+    private final BatchSettlementService settlementService;
 
-    public UsageApiController(UsageQueryService queryService) {
+    public UsageApiController(UsageQueryService queryService, BatchSettlementService settlementService) {
         this.queryService = queryService;
+        this.settlementService = settlementService;
     }
 
     /**
@@ -244,4 +248,27 @@ public class UsageApiController {
                 return ResponseEntity.notFound().build();
             });
     }
+
+    /**
+     * 手動觸發批次結算。
+     *
+     * <p>端點：{@code POST /api/v1/usage/settlement/trigger}
+     *
+     * <p>處理所有 {@code processed=false} 的 RawEventBatch，
+     * 執行聚合統計並更新 system_stats、daily_user_usage、daily_model_usage。
+     *
+     * @return 處理的批次數量
+     */
+    @PostMapping("/settlement/trigger")
+    public ResponseEntity<SettlementResult> triggerSettlement() {
+        log.info("API request: triggerSettlement (manual)");
+        int processedBatches = settlementService.triggerSettlement();
+        log.info("Manual settlement completed: {} batches processed", processedBatches);
+        return ResponseEntity.ok(new SettlementResult(processedBatches, "Settlement completed"));
+    }
+
+    /**
+     * 結算結果回應。
+     */
+    public record SettlementResult(int processedBatches, String message) {}
 }

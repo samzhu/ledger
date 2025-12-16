@@ -6,9 +6,15 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportRuntimeHints;
 
+import io.github.samzhu.ledger.document.DailyModelUsage;
+import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.RawEventBatch;
+import io.github.samzhu.ledger.document.SystemStats;
+import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.dto.UsageEvent;
 import io.github.samzhu.ledger.dto.UsageEventData;
+import io.github.samzhu.ledger.controller.UsageApiController;
+import io.github.samzhu.ledger.service.UsageQueryService;
 
 /**
  * GraalVM Native Image 執行時期提示配置。
@@ -46,6 +52,30 @@ public class NativeHintsConfig {
                 .registerType(UsageEventData.class, MemberCategory.values())
                 .registerType(UsageEvent.class, MemberCategory.values())
                 .registerType(RawEventBatch.class, MemberCategory.values());
+
+            // 註冊 Document 類別供 Thymeleaf 模板反射使用
+            hints.reflection()
+                // DailyUserUsage 及其嵌套記錄
+                .registerType(DailyUserUsage.class, MemberCategory.values())
+                .registerType(DailyUserUsage.LatencyStats.class, MemberCategory.values())
+                .registerType(DailyUserUsage.CacheEfficiency.class, MemberCategory.values())
+                .registerType(DailyUserUsage.HourlyBreakdown.class, MemberCategory.values())
+                .registerType(DailyUserUsage.ModelBreakdown.class, MemberCategory.values())
+                .registerType(DailyUserUsage.CostBreakdown.class, MemberCategory.values())
+                // DailyModelUsage 及其嵌套記錄
+                .registerType(DailyModelUsage.class, MemberCategory.values())
+                .registerType(DailyModelUsage.LatencyStats.class, MemberCategory.values())
+                .registerType(DailyModelUsage.CacheEfficiency.class, MemberCategory.values())
+                // SystemStats 及其嵌套記錄
+                .registerType(SystemStats.class, MemberCategory.values())
+                .registerType(SystemStats.TopItem.class, MemberCategory.values())
+                // UserQuota 及其嵌套記錄
+                .registerType(UserQuota.class, MemberCategory.values())
+                .registerType(UserQuota.QuotaConfig.class, MemberCategory.values())
+                // UsageQueryService 內部記錄
+                .registerType(UsageQueryService.ModelSummary.class, MemberCategory.values())
+                // UsageApiController 內部記錄
+                .registerType(UsageApiController.SettlementResult.class, MemberCategory.values());
         }
     }
 }

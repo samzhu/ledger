@@ -224,7 +224,9 @@
                     </span>
                 </div>
             </div>
-            <canvas id="dailyChart" height="120"></canvas>
+            <div class="relative" style="height: 200px;">
+                <canvas id="dailyChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -238,7 +240,9 @@
                       th:text="${lastDayPeakHour + ':00'} + ' (' + ${lastDayPeakHourRequests} + ' requests)'">14:00 (150 requests)</span>
             </div>
         </div>
-        <canvas id="hourlyChart" height="80"></canvas>
+        <div class="relative" style="height: 150px;">
+            <canvas id="hourlyChart"></canvas>
+        </div>
     </div>
 
     <!-- Leaderboards -->
