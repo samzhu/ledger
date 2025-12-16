@@ -32,7 +32,7 @@ management:
     web:
       exposure:
         # 生產環境: 只暴露必要端點
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,scheduledtasks
 
 # 日誌 - INFO 減少日誌量
 logging:

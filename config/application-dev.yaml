@@ -29,8 +29,8 @@ management:
   endpoints:
     web:
       exposure:
-        # 本地開發: 暴露所有端點 (包含 env, configprops)
-        include: health,info,metrics,prometheus,env,configprops
+        # 本地開發: 暴露所有端點 (包含 env, configprops, scheduledtasks)
+        include: health,info,metrics,prometheus,env,configprops,scheduledtasks
 
 # 日誌 - DEBUG 便於開發
 logging:
