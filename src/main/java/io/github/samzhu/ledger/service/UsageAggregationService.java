@@ -312,15 +312,14 @@ public class UsageAggregationService {
             BigDecimal totalCost = costService.calculateBatchCost(userEvents);
 
             Query query = Query.query(Criteria.where("_id").is(userId));
+            // 注意：Firestore MongoDB 相容層不支援同一欄位同時使用 setOnInsert 和 inc
+            // $inc 會在欄位不存在時自動建立，所以不需要 setOnInsert
             Update update = new Update()
                 .setOnInsert("userId", userId)
                 .setOnInsert("firstSeenAt", Instant.now())
                 .setOnInsert("quotaConfig", UserQuota.QuotaConfig.defaults())
                 .setOnInsert("periodStartDate", LocalDate.now())
                 .setOnInsert("periodEndDate", LocalDate.now().plusMonths(1))
-                .setOnInsert("periodTokenUsed", 0L)
-                .setOnInsert("periodCostUsed", BigDecimal.ZERO)
-                .setOnInsert("periodRequestCount", 0)
                 .setOnInsert("tokenUsagePercent", 0.0)
                 .setOnInsert("costUsagePercent", 0.0)
                 .setOnInsert("quotaExceeded", false)
