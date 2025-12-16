@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import io.github.samzhu.ledger.document.RawEventBatch;
 import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 import io.github.samzhu.ledger.repository.RawEventBatchRepository;
 
 /**
@@ -96,6 +97,7 @@ public class BatchSettlementService {
 
         int successCount = 0;
         int failCount = 0;
+        int skippedCount = 0;
         int totalEvents = 0;
 
         for (RawEventBatch batch : pendingBatches) {
@@ -108,6 +110,13 @@ public class BatchSettlementService {
 
                 successCount++;
                 log.debug("Batch settled: id={}, events={}", batch.id(), events.size());
+            } catch (UnknownModelPricingException e) {
+                // 未知模型定價 - 不標記為 processed，等待新增定價後重試
+                skippedCount++;
+                log.error("⚠️ BATCH SKIPPED - Unknown model pricing detected! " +
+                    "batchId={}, model='{}', eventId='{}'. " +
+                    "Please add pricing configuration in application.yaml and retry.",
+                    batch.id(), e.getModelName(), e.getEventId());
             } catch (Exception e) {
                 failCount++;
                 log.error("Failed to settle batch {}: {}", batch.id(), e.getMessage(), e);
@@ -115,8 +124,8 @@ public class BatchSettlementService {
         }
 
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Settlement stats: {} success, {} failed, {} events in {}ms",
-            successCount, failCount, totalEvents, duration);
+        log.info("Settlement stats: {} success, {} failed, {} skipped (unknown pricing), {} events in {}ms",
+            successCount, failCount, skippedCount, totalEvents, duration);
 
         return successCount;
     }

@@ -215,11 +215,14 @@ public class UsageAggregationService {
 
     /**
      * 更新模型日用量聚合（增強版）。
+     *
+     * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
     private void updateDailyModelUsage(List<UsageEvent> events) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, DailyModelUsage.class);
 
         Map<String, List<UsageEvent>> grouped = events.stream()
+            .filter(e -> e.model() != null)
             .collect(Collectors.groupingBy(e -> DailyModelUsage.createId(e.date(), e.model())));
 
         grouped.forEach((docId, modelEvents) -> {
@@ -484,11 +487,14 @@ public class UsageAggregationService {
 
     /**
      * 聚合模型維度細分。
+     *
+     * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
     private Map<String, ModelBreakdown> aggregateModelBreakdown(List<UsageEvent> events) {
         Map<String, ModelBreakdown> result = new HashMap<>();
 
         Map<String, List<UsageEvent>> byModel = events.stream()
+            .filter(e -> e.model() != null)
             .collect(Collectors.groupingBy(UsageEvent::model));
 
         byModel.forEach((model, modelEvents) -> {
@@ -571,9 +577,12 @@ public class UsageAggregationService {
 
     /**
      * 計算熱門模型排行榜。
+     *
+     * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
     private List<TopItem> calculateTopModels(List<UsageEvent> events, int limit) {
         Map<String, List<UsageEvent>> byModel = events.stream()
+            .filter(e -> e.model() != null)
             .collect(Collectors.groupingBy(UsageEvent::model));
 
         return byModel.entrySet().stream()

@@ -1,6 +1,7 @@
 package io.github.samzhu.ledger.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.github.samzhu.ledger.config.LedgerProperties;
+import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 import io.github.samzhu.ledger.config.LedgerProperties.BatchConfig;
 import io.github.samzhu.ledger.config.LedgerProperties.ModelPricing;
 import io.github.samzhu.ledger.dto.UsageEvent;
@@ -111,17 +113,32 @@ class CostCalculationServiceTest {
     }
 
     @Test
-    void shouldReturnZeroForUnknownModel() {
-        // Given: unknown model
+    void shouldThrowExceptionForUnknownModel() {
+        // Given: unknown model (non-null but not configured)
         UsageEvent event = createEvent(
             "unknown-model",
             1000, 500, 0, 0
         );
 
+        // When/Then: should throw UnknownModelPricingException
+        assertThatThrownBy(() -> costService.calculateCost(event))
+            .isInstanceOf(UnknownModelPricingException.class)
+            .hasMessageContaining("unknown-model")
+            .hasMessageContaining("event-1");
+    }
+
+    @Test
+    void shouldReturnZeroForNullModel() {
+        // Given: null model (error event)
+        UsageEvent event = createEvent(
+            null,
+            0, 0, 0, 0
+        );
+
         // When
         BigDecimal cost = costService.calculateCost(event);
 
-        // Then
+        // Then: null model is allowed (for error events), returns zero
         assertThat(cost).isEqualByComparingTo(BigDecimal.ZERO);
     }
 

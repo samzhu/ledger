@@ -12,6 +12,7 @@ import io.github.samzhu.ledger.config.LedgerProperties;
 import io.github.samzhu.ledger.config.LedgerProperties.ModelPricing;
 import io.github.samzhu.ledger.document.DailyUserUsage.CostBreakdown;
 import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 
 /**
  * LLM API 用量成本計算服務。
@@ -58,20 +59,35 @@ public class CostCalculationService {
     /**
      * 計算單筆用量事件的成本。
      *
-     * <p>若找不到對應模型的定價，會嘗試模糊比對（例如忽略版本號差異），
-     * 仍找不到則回傳零成本並記錄警告。
+     * <p>若找不到對應模型的定價，會嘗試模糊比對（例如忽略版本號差異）。
+     *
+     * <p>行為說明：
+     * <ul>
+     *   <li>model = null（error 事件）：回傳零成本，這是正常情況</li>
+     *   <li>model = "xxx" 但找不到定價：拋出 {@link UnknownModelPricingException}</li>
+     * </ul>
      *
      * <p>根據 Anthropic API，{@code inputTokens} 已經只包含非快取的輸入 tokens，
      * 不需要再減去 {@code cacheReadTokens}。
      *
      * @param event 用量事件
      * @return 計算的成本（美元），精確到小數點後 6 位
+     * @throws UnknownModelPricingException 若模型非 null 但找不到定價配置
      */
     public BigDecimal calculateCost(UsageEvent event) {
+        // Error 事件可能沒有 model，這是允許的
+        if (event.model() == null) {
+            log.debug("Event has null model (likely error event), returning zero cost: eventId={}",
+                event.eventId());
+            return BigDecimal.ZERO;
+        }
+
         ModelPricing pricing = findPricing(event.model());
         if (pricing == null) {
-            log.warn("Unknown model pricing: {}, returning zero cost", event.model());
-            return BigDecimal.ZERO;
+            log.error("Unknown model pricing detected: model='{}', eventId='{}'. " +
+                "Please add pricing configuration in application.yaml",
+                event.model(), event.eventId());
+            throw new UnknownModelPricingException(event.model(), event.eventId());
         }
 
         // inputTokens 已經是非快取的輸入 tokens（快取斷點之後的部分）
@@ -136,11 +152,18 @@ public class CostCalculationService {
 
     /**
      * 計算單筆事件的 Cache 節省成本。
+     *
+     * @throws UnknownModelPricingException 若模型非 null 但找不到定價配置
      */
     private BigDecimal calculateSingleEventCacheSavings(UsageEvent event) {
-        ModelPricing pricing = findPricing(event.model());
-        if (pricing == null || event.cacheReadTokens() <= 0) {
+        // Error 事件可能沒有 model，這是允許的
+        if (event.model() == null || event.cacheReadTokens() <= 0) {
             return BigDecimal.ZERO;
+        }
+
+        ModelPricing pricing = findPricing(event.model());
+        if (pricing == null) {
+            throw new UnknownModelPricingException(event.model(), event.eventId());
         }
 
         // 如果沒有 cache，需要付的 input 成本
@@ -163,6 +186,7 @@ public class CostCalculationService {
      *
      * @param events 用量事件列表
      * @return 成本細分
+     * @throws UnknownModelPricingException 若有事件的模型非 null 但找不到定價配置
      */
     public CostBreakdown calculateCostBreakdown(List<UsageEvent> events) {
         BigDecimal inputCost = BigDecimal.ZERO;
@@ -171,9 +195,14 @@ public class CostCalculationService {
         BigDecimal cacheWriteCost = BigDecimal.ZERO;
 
         for (UsageEvent event : events) {
+            // Error 事件可能沒有 model，跳過
+            if (event.model() == null) {
+                continue;
+            }
+
             ModelPricing pricing = findPricing(event.model());
             if (pricing == null) {
-                continue;
+                throw new UnknownModelPricingException(event.model(), event.eventId());
             }
 
             // inputTokens 已經是非快取的輸入（快取斷點之後的部分）
