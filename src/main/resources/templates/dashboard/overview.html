@@ -67,9 +67,9 @@
             <p class="text-2xl font-bold text-gray-800"
                th:text="${#numbers.formatInteger(summaryTotalTokens, 0, 'COMMA')}">0</p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'In: ' + #numbers.formatInteger(summaryTotalInputTokens, 0, 'COMMA')">In: 0</span>
+                <span th:text="|In: ${#numbers.formatInteger(summaryTotalInputTokens, 0, 'COMMA')}|">In: 0</span>
                 <span class="mx-1">|</span>
-                <span th:text="'Out: ' + #numbers.formatInteger(summaryTotalOutputTokens, 0, 'COMMA')">Out: 0</span>
+                <span th:text="|Out: ${#numbers.formatInteger(summaryTotalOutputTokens, 0, 'COMMA')}|">Out: 0</span>
             </div>
         </div>
 
@@ -87,7 +87,7 @@
                 $<span th:text="${#numbers.formatDecimal(summaryTotalCost, 1, 2)}">0.00</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'Avg: $' + #numbers.formatDecimal(summaryAvgDailyCost, 1, 2) + '/day'">Avg: $0.00/day</span>
+                <span th:text="|Avg: $${#numbers.formatDecimal(summaryAvgDailyCost, 1, 2)}/day|">Avg: $0.00/day</span>
             </div>
         </div>
 
@@ -122,9 +122,9 @@
                 <span class="text-sm font-normal text-gray-500">ms</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'P50: ' + #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">P50: 0ms</span>
+                <span th:text="|P50: ${#numbers.formatDecimal(summaryP50Latency, 0, 0)}ms|">P50: 0ms</span>
                 <span class="mx-1">|</span>
-                <span th:text="'P90: ' + #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">P90: 0ms</span>
+                <span th:text="|P90: ${#numbers.formatDecimal(summaryP90Latency, 0, 0)}ms|">P90: 0ms</span>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
                 $<span th:text="${#numbers.formatDecimal(summaryCacheSavings, 1, 2)}">0.00</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'Hit Rate: ' + #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">Hit Rate: 0%</span>
+                <span th:text="|Hit Rate: ${#numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1)}%|">Hit Rate: 0%</span>
             </div>
         </div>
     </div>
@@ -175,11 +175,11 @@
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-600">Cache Hit Rate</span>
                     <span class="text-sm font-medium text-cyan-600"
-                          th:text="${lastDayStats == null} ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">0%</span>
+                          th:text="${lastDayStats == null ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'}">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div class="bg-cyan-500 h-2.5 rounded-full transition-all duration-500"
-                         th:style="${lastDayStats == null} ? 'width: 0%' : 'width: ' + (summaryAvgCacheHitRate * 100) + '%'"></div>
+                         th:style="${lastDayStats == null} ? 'width: 0%' : |width: ${summaryAvgCacheHitRate * 100}%|"></div>
                 </div>
             </div>
 
@@ -190,22 +190,22 @@
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P50</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'}">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P90</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'}">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P99</p>
                         <p class="text-sm font-semibold text-orange-600"
-                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'}">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">Avg</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'}">0ms</p>
                     </div>
                 </div>
             </div>

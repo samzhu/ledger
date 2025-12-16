@@ -171,7 +171,7 @@
         <div th:if="${!#lists.isEmpty(users)}" class="px-6 py-3 bg-gray-50 border-t border-gray-200">
             <div class="flex justify-between items-center text-sm text-gray-500">
                 <span>Total Cost: <span class="font-medium text-green-600"
-                      th:text="'$' + #numbers.formatDecimal(usersTotalCost, 1, 2)">$0.00</span></span>
+                      th:text="|$${#numbers.formatDecimal(usersTotalCost, 1, 2)}|">$0.00</span></span>
                 <span>Total Tokens: <span class="font-medium text-gray-700"
                       th:text="${#numbers.formatInteger(usersTotalTokens, 0, 'COMMA')}">0</span></span>
             </div>
