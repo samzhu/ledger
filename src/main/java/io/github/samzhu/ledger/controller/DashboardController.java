@@ -84,6 +84,13 @@ public class DashboardController {
             .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         double avgCacheHitRate = stats.stream().mapToDouble(SystemStats::systemCacheHitRate).average().orElse(0);
 
+        // Get the last day's stats for display (SpEL has trouble with list index access)
+        SystemStats lastDayStats = stats.isEmpty() ? null : stats.get(stats.size() - 1);
+        double lastDaySuccessRate = lastDayStats != null ? lastDayStats.successRate() : 0;
+        int lastDayPeakHour = lastDayStats != null ? lastDayStats.peakHour() : 0;
+        int lastDayPeakHourRequests = lastDayStats != null ? lastDayStats.peakHourRequests() : 0;
+        var lastDayTopModels = lastDayStats != null ? lastDayStats.topModels() : java.util.Collections.emptyList();
+
         model.addAttribute("currentPage", "overview");
         model.addAttribute("pageTitle", "System Overview");
         model.addAttribute("stats", stats);
@@ -105,6 +112,13 @@ public class DashboardController {
         model.addAttribute("summaryP99Latency", p99Latency);
         model.addAttribute("summaryCacheSavings", cacheSavings);
         model.addAttribute("summaryAvgCacheHitRate", avgCacheHitRate);
+
+        // Add last day stats for template
+        model.addAttribute("lastDayStats", lastDayStats);
+        model.addAttribute("lastDaySuccessRate", lastDaySuccessRate);
+        model.addAttribute("lastDayPeakHour", lastDayPeakHour);
+        model.addAttribute("lastDayPeakHourRequests", lastDayPeakHourRequests);
+        model.addAttribute("lastDayTopModels", lastDayTopModels);
 
         log.debug("Overview loaded: {} stats records, {} top users", stats.size(), topUsers.size());
 

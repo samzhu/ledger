@@ -46,9 +46,9 @@
                th:text="${#numbers.formatInteger(summaryTotalRequests, 0, 'COMMA')}">0</p>
             <div class="mt-2 flex items-center gap-1">
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                      th:classappend="${stats.isEmpty()} ? 'bg-gray-100 text-gray-600' : (stats.get(stats.size()-1).successRate() >= 95 ? 'bg-green-100 text-green-700' : (stats.get(stats.size()-1).successRate() >= 90 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'))">
-                    <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.get(stats.size()-1).successRate(), 1, 1) + '%'}">98.5%</span>
-                    <span th:if="${stats.isEmpty()}">N/A</span>
+                      th:classappend="${lastDayStats == null} ? 'bg-gray-100 text-gray-600' : (${lastDaySuccessRate >= 95} ? 'bg-green-100 text-green-700' : (${lastDaySuccessRate >= 90} ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'))">
+                    <span th:if="${lastDayStats != null}" th:text="${#numbers.formatDecimal(lastDaySuccessRate, 1, 1) + '%'}">98.5%</span>
+                    <span th:if="${lastDayStats == null}">N/A</span>
                     success
                 </span>
             </div>
@@ -158,15 +158,15 @@
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-600">Success Rate</span>
                     <span class="text-sm font-medium"
-                          th:classappend="${stats.isEmpty()} ? 'text-gray-500' : (stats.get(stats.size()-1).successRate() >= 95 ? 'text-green-600' : (stats.get(stats.size()-1).successRate() >= 90 ? 'text-yellow-600' : 'text-red-600'))">
-                        <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.get(stats.size()-1).successRate(), 1, 1) + '%'}">98.5%</span>
-                        <span th:if="${stats.isEmpty()}">N/A</span>
+                          th:classappend="${lastDayStats == null} ? 'text-gray-500' : (${lastDaySuccessRate >= 95} ? 'text-green-600' : (${lastDaySuccessRate >= 90} ? 'text-yellow-600' : 'text-red-600'))">
+                        <span th:if="${lastDayStats != null}" th:text="${#numbers.formatDecimal(lastDaySuccessRate, 1, 1) + '%'}">98.5%</span>
+                        <span th:if="${lastDayStats == null}">N/A</span>
                     </span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div class="h-2.5 rounded-full transition-all duration-500"
-                         th:classappend="${stats.isEmpty()} ? 'bg-gray-400' : (stats.get(stats.size()-1).successRate() >= 95 ? 'bg-green-500' : (stats.get(stats.size()-1).successRate() >= 90 ? 'bg-yellow-500' : 'bg-red-500'))"
-                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + stats.get(stats.size()-1).successRate() + '%'"></div>
+                         th:classappend="${lastDayStats == null} ? 'bg-gray-400' : (${lastDaySuccessRate >= 95} ? 'bg-green-500' : (${lastDaySuccessRate >= 90} ? 'bg-yellow-500' : 'bg-red-500'))"
+                         th:style="${lastDayStats == null} ? 'width: 0%' : 'width: ' + ${lastDaySuccessRate} + '%'"></div>
                 </div>
             </div>
 
@@ -175,11 +175,11 @@
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-600">Cache Hit Rate</span>
                     <span class="text-sm font-medium text-cyan-600"
-                          th:text="${stats.isEmpty()} ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">0%</span>
+                          th:text="${lastDayStats == null} ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div class="bg-cyan-500 h-2.5 rounded-full transition-all duration-500"
-                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + (summaryAvgCacheHitRate * 100) + '%'"></div>
+                         th:style="${lastDayStats == null} ? 'width: 0%' : 'width: ' + (summaryAvgCacheHitRate * 100) + '%'"></div>
                 </div>
             </div>
 
@@ -190,22 +190,22 @@
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P50</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P90</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P99</p>
                         <p class="text-sm font-semibold text-orange-600"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">Avg</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'">0ms</p>
+                           th:text="${lastDayStats == null} ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'">0ms</p>
                     </div>
                 </div>
             </div>
@@ -232,10 +232,10 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold text-gray-800">Hourly Distribution (Last Day)</h3>
-            <div th:if="${!stats.isEmpty()}" class="flex items-center gap-2">
+            <div th:if="${lastDayStats != null}" class="flex items-center gap-2">
                 <span class="text-sm text-gray-500">Peak Hour:</span>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
-                      th:text="${stats.get(stats.size()-1).peakHour() + ':00'} + ' (' + ${stats.get(stats.size()-1).peakHourRequests()} + ' requests)'">14:00 (150 requests)</span>
+                      th:text="${lastDayPeakHour + ':00'} + ' (' + ${lastDayPeakHourRequests} + ' requests)'">14:00 (150 requests)</span>
             </div>
         </div>
         <canvas id="hourlyChart" height="80"></canvas>
@@ -306,7 +306,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        <tr th:if="${!stats.isEmpty()}" th:each="model, iterStat : ${stats.get(stats.size()-1).topModels()}" class="hover:bg-gray-50">
+                        <tr th:if="${lastDayStats != null}" th:each="model, iterStat : ${lastDayTopModels}" class="hover:bg-gray-50">
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2">
                                     <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium"
@@ -325,7 +325,7 @@
                                 $<span th:text="${#numbers.formatDecimal(model.costUsd(), 1, 2)}">0.00</span>
                             </td>
                         </tr>
-                        <tr th:if="${stats.isEmpty() || stats.get(stats.size()-1).topModels() == null || stats.get(stats.size()-1).topModels().isEmpty()}">
+                        <tr th:if="${lastDayStats == null || lastDayTopModels == null || #lists.isEmpty(lastDayTopModels)}">
                             <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
                                 No model data available
                             </td>
