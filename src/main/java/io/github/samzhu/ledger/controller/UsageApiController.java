@@ -26,6 +26,7 @@ import io.github.samzhu.ledger.dto.api.SystemUsageResponse;
 import io.github.samzhu.ledger.dto.api.UsageSummary;
 import io.github.samzhu.ledger.dto.api.UserUsageResponse;
 import io.github.samzhu.ledger.service.BatchSettlementService;
+import io.github.samzhu.ledger.service.EventBufferService;
 import io.github.samzhu.ledger.service.UsageQueryService;
 
 /**
@@ -50,10 +51,14 @@ public class UsageApiController {
 
     private final UsageQueryService queryService;
     private final BatchSettlementService settlementService;
+    private final EventBufferService bufferService;
 
-    public UsageApiController(UsageQueryService queryService, BatchSettlementService settlementService) {
+    public UsageApiController(UsageQueryService queryService,
+                              BatchSettlementService settlementService,
+                              EventBufferService bufferService) {
         this.queryService = queryService;
         this.settlementService = settlementService;
+        this.bufferService = bufferService;
     }
 
     /**
@@ -250,6 +255,23 @@ public class UsageApiController {
     }
 
     /**
+     * 手動觸發批次寫入（Flush）。
+     *
+     * <p>端點：{@code POST /api/v1/usage/flush/trigger}
+     *
+     * <p>將記憶體中的事件緩衝區寫入 RawEventBatch。
+     *
+     * @return 刷新結果
+     */
+    @PostMapping("/flush/trigger")
+    public ResponseEntity<FlushResult> triggerFlush() {
+        log.info("API request: triggerFlush (manual)");
+        bufferService.flushBuffer();
+        log.info("Manual flush completed");
+        return ResponseEntity.ok(new FlushResult("Flush completed"));
+    }
+
+    /**
      * 手動觸發批次結算。
      *
      * <p>端點：{@code POST /api/v1/usage/settlement/trigger}
@@ -268,7 +290,45 @@ public class UsageApiController {
     }
 
     /**
+     * 手動觸發完整處理流程：先 Flush 再 Settlement。
+     *
+     * <p>端點：{@code POST /api/v1/usage/process/trigger}
+     *
+     * <p>執行順序：
+     * <ol>
+     *   <li>Flush - 將記憶體緩衝區寫入 RawEventBatch</li>
+     *   <li>Settlement - 處理所有未結算的 RawEventBatch</li>
+     * </ol>
+     *
+     * @return 處理結果
+     */
+    @PostMapping("/process/trigger")
+    public ResponseEntity<ProcessResult> triggerProcess() {
+        log.info("API request: triggerProcess (manual flush + settlement)");
+
+        // Step 1: Flush buffer
+        bufferService.flushBuffer();
+        log.info("Step 1/2: Flush completed");
+
+        // Step 2: Settlement
+        int processedBatches = settlementService.triggerSettlement();
+        log.info("Step 2/2: Settlement completed, {} batches processed", processedBatches);
+
+        return ResponseEntity.ok(new ProcessResult(processedBatches, "Process completed (flush + settlement)"));
+    }
+
+    /**
+     * Flush 結果回應。
+     */
+    public record FlushResult(String message) {}
+
+    /**
      * 結算結果回應。
      */
     public record SettlementResult(int processedBatches, String message) {}
+
+    /**
+     * 完整處理結果回應。
+     */
+    public record ProcessResult(int processedBatches, String message) {}
 }

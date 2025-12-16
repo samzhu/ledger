@@ -50,7 +50,7 @@ spring:
 ledger:
   batch:
     size: 500                        # 累積 500 筆後批量寫入
-    flush-cron: "0 0,30 * * * *"      # 每小時 00 分和 30 分刷新
+    flush-cron: "0 20,50 * * * *"     # 每小時 20 分和 50 分刷新（在結算前 10 分鐘）
     settlement-cron: "0 0 * * * *"    # 每小時整點結算
   pricing:
     # Claude Sonnet 4

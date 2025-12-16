@@ -75,7 +75,9 @@ public class NativeHintsConfig {
                 // UsageQueryService 內部記錄
                 .registerType(UsageQueryService.ModelSummary.class, MemberCategory.values())
                 // UsageApiController 內部記錄
-                .registerType(UsageApiController.SettlementResult.class, MemberCategory.values());
+                .registerType(UsageApiController.FlushResult.class, MemberCategory.values())
+                .registerType(UsageApiController.SettlementResult.class, MemberCategory.values())
+                .registerType(UsageApiController.ProcessResult.class, MemberCategory.values());
         }
     }
 }
