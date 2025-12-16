@@ -203,9 +203,13 @@ public class CostCalculationService {
 
     /**
      * 查找模型定價，支援完全比對和模糊比對。
+     *
+     * @param model 模型名稱，可能為 null（例如 error 事件）
+     * @return 模型定價，若 model 為 null 或找不到定價則回傳 null
      */
     private ModelPricing findPricing(String model) {
-        if (properties.pricing() == null) {
+        // 處理 error 事件可能沒有 model 欄位的情況
+        if (model == null || properties.pricing() == null) {
             return null;
         }
 
