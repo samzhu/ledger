@@ -93,22 +93,22 @@ class UsageEventFunctionTest {
     @Test
     void shouldProcessCloudEventMessage() throws Exception {
         // Given: CloudEvent data payload (as received after Spring Cloud Stream parses Structured Mode)
+        // Gate 只發送原始數據，totalTokens 由 Ledger 計算
         UsageEventData eventData = new UsageEventData(
-            "claude-sonnet-4-20250514",
-            "msg-123",
-            1000,
-            500,
-            100,
-            200,
-            1800,
-            1500L,
-            true,
-            "end_turn",
-            "success",
-            null,  // errorType
-            "primary-key",
-            "trace-456",
-            "anthro-req-789"
+            "claude-sonnet-4-20250514",  // model
+            1000,                         // inputTokens (非快取輸入)
+            500,                          // outputTokens
+            100,                          // cacheCreationTokens
+            200,                          // cacheReadTokens
+            "msg-123",                    // messageId
+            1500L,                        // latencyMs
+            true,                         // stream
+            "end_turn",                   // stopReason
+            "success",                    // status
+            null,                         // errorType
+            "primary-key",                // keyAlias
+            "trace-456",                  // traceId
+            "anthro-req-789"              // anthropicRequestId
         );
 
         String eventId = UUID.randomUUID().toString();
@@ -150,6 +150,9 @@ class UsageEventFunctionTest {
         assertThat(capturedEvent.outputTokens()).isEqualTo(500);
         assertThat(capturedEvent.cacheCreationTokens()).isEqualTo(100);
         assertThat(capturedEvent.cacheReadTokens()).isEqualTo(200);
+        // 計算: totalInputTokens = 1000 + 100 + 200 = 1300
+        assertThat(capturedEvent.totalInputTokens()).isEqualTo(1300);
+        // 計算: totalTokens = 1300 + 500 = 1800
         assertThat(capturedEvent.totalTokens()).isEqualTo(1800);
         assertThat(capturedEvent.latencyMs()).isEqualTo(1500L);
         assertThat(capturedEvent.stream()).isTrue();
@@ -166,21 +169,20 @@ class UsageEventFunctionTest {
     void shouldHandleMessageWithoutTime() throws Exception {
         // Given: CloudEvent without time header
         UsageEventData eventData = new UsageEventData(
-            "claude-haiku-3-5-20241022",
-            "msg-456",
-            500,
-            250,
-            0,
-            0,
-            750,
-            800L,
-            false,
-            "max_tokens",
-            "success",
-            null,  // errorType
-            "secondary-key",
-            "trace-789",
-            "anthro-req-abc"
+            "claude-haiku-3-5-20241022",  // model
+            500,                           // inputTokens
+            250,                           // outputTokens
+            0,                             // cacheCreationTokens
+            0,                             // cacheReadTokens
+            "msg-456",                     // messageId
+            800L,                          // latencyMs
+            false,                         // stream
+            "max_tokens",                  // stopReason
+            "success",                     // status
+            null,                          // errorType
+            "secondary-key",               // keyAlias
+            "trace-789",                   // traceId
+            "anthro-req-abc"               // anthropicRequestId
         );
 
         String eventId = UUID.randomUUID().toString();
@@ -219,21 +221,20 @@ class UsageEventFunctionTest {
     void shouldProcessOpusModelEvent() throws Exception {
         // Given: Opus model usage event
         UsageEventData eventData = new UsageEventData(
-            "claude-opus-4-20250514",
-            "msg-opus-123",
-            5000,
-            2000,
-            500,
-            1000,
-            8500,
-            5000L,
-            true,
-            "end_turn",
-            "success",
-            null,  // errorType
-            "enterprise-key",
-            "trace-opus",
-            "anthro-opus-req"
+            "claude-opus-4-20250514",  // model
+            5000,                       // inputTokens
+            2000,                       // outputTokens
+            500,                        // cacheCreationTokens
+            1000,                       // cacheReadTokens
+            "msg-opus-123",             // messageId
+            5000L,                      // latencyMs
+            true,                       // stream
+            "end_turn",                 // stopReason
+            "success",                  // status
+            null,                       // errorType
+            "enterprise-key",           // keyAlias
+            "trace-opus",               // traceId
+            "anthro-opus-req"           // anthropicRequestId
         );
 
         String eventId = UUID.randomUUID().toString();
@@ -275,21 +276,20 @@ class UsageEventFunctionTest {
     void shouldHandleErrorStatus() throws Exception {
         // Given: Event with error status
         UsageEventData eventData = new UsageEventData(
-            "claude-sonnet-4-20250514",
-            "msg-error",
-            100,
-            0,
-            0,
-            0,
-            100,
-            50L,
-            false,
-            null,
-            "error",
-            "rate_limit_error",  // errorType
-            "test-key",
-            "trace-error",
-            "anthro-error-req"
+            "claude-sonnet-4-20250514",  // model
+            100,                          // inputTokens
+            0,                            // outputTokens
+            0,                            // cacheCreationTokens
+            0,                            // cacheReadTokens
+            "msg-error",                  // messageId
+            50L,                          // latencyMs
+            false,                        // stream
+            null,                         // stopReason
+            "error",                      // status
+            "rate_limit_error",           // errorType
+            "test-key",                   // keyAlias
+            "trace-error",                // traceId
+            "anthro-error-req"            // anthropicRequestId
         );
 
         String eventId = UUID.randomUUID().toString();

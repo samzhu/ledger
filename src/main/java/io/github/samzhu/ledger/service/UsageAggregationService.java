@@ -127,7 +127,8 @@ public class UsageAggregationService {
             UsageEvent first = userEvents.get(0);
 
             // === 基本統計 ===
-            long totalInput = userEvents.stream().mapToLong(UsageEvent::inputTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
+            long totalInput = userEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
             long totalOutput = userEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
             long totalCacheCreation = userEvents.stream().mapToLong(UsageEvent::cacheCreationTokens).sum();
             long totalCacheRead = userEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
@@ -225,7 +226,8 @@ public class UsageAggregationService {
             UsageEvent first = modelEvents.get(0);
 
             // === 基本統計 ===
-            long totalInput = modelEvents.stream().mapToLong(UsageEvent::inputTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
+            long totalInput = modelEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
             long totalOutput = modelEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
             long totalCacheCreation = modelEvents.stream().mapToLong(UsageEvent::cacheCreationTokens).sum();
             long totalCacheRead = modelEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
@@ -299,7 +301,8 @@ public class UsageAggregationService {
             .collect(Collectors.groupingBy(UsageEvent::userId));
 
         grouped.forEach((userId, userEvents) -> {
-            long totalInput = userEvents.stream().mapToLong(UsageEvent::inputTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
+            long totalInput = userEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
             long totalOutput = userEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
             long totalTokens = userEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
 
@@ -346,7 +349,8 @@ public class UsageAggregationService {
             .collect(Collectors.groupingBy(UsageEvent::date));
 
         grouped.forEach((date, dateEvents) -> {
-            long totalInput = dateEvents.stream().mapToLong(UsageEvent::inputTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
+            long totalInput = dateEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
             long totalOutput = dateEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
             long totalTokens = dateEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
             int successCount = (int) dateEvents.stream().filter(UsageEvent::isSuccess).count();
@@ -488,7 +492,8 @@ public class UsageAggregationService {
             .collect(Collectors.groupingBy(UsageEvent::model));
 
         byModel.forEach((model, modelEvents) -> {
-            long inputTokens = modelEvents.stream().mapToLong(UsageEvent::inputTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
+            long inputTokens = modelEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
             long outputTokens = modelEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
             long cacheReadTokens = modelEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
             int requestCount = modelEvents.size();
@@ -506,9 +511,12 @@ public class UsageAggregationService {
 
     /**
      * 計算 Cache 效率指標（用於 DailyUserUsage）。
+     *
+     * <p>hitRate = cacheReadTokens / totalInputTokens
      */
     private DailyUserUsage.CacheEfficiency calculateCacheEfficiency(List<UsageEvent> events) {
-        long totalInput = events.stream().mapToLong(UsageEvent::inputTokens).sum();
+        // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens
+        long totalInput = events.stream().mapToLong(UsageEvent::totalInputTokens).sum();
         long cacheRead = events.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
 
         if (totalInput == 0) {
@@ -523,9 +531,12 @@ public class UsageAggregationService {
 
     /**
      * 計算 Cache 效率指標（用於 DailyModelUsage）。
+     *
+     * <p>hitRate = cacheReadTokens / totalInputTokens
      */
     private DailyModelUsage.CacheEfficiency calculateModelCacheEfficiency(List<UsageEvent> events) {
-        long totalInput = events.stream().mapToLong(UsageEvent::inputTokens).sum();
+        // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens
+        long totalInput = events.stream().mapToLong(UsageEvent::totalInputTokens).sum();
         long cacheRead = events.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
 
         if (totalInput == 0) {

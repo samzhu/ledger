@@ -97,8 +97,9 @@ public class UsageEventFunction {
 
                 bufferService.addEvent(event);
 
+                // 使用 UsageEvent 的計算方法取得總 tokens
                 log.debug("Event consumed: eventId={}, userId={}, model={}, tokens={}",
-                    eventId, subject, data.model(), data.totalTokens());
+                    eventId, subject, event.model(), event.totalTokens());
             } catch (Exception e) {
                 log.error("Failed to process CloudEvent: eventId={}, error={}",
                     CloudEventMessageUtils.getId(message), e.getMessage(), e);

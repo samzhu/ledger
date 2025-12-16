@@ -172,13 +172,17 @@
         <!-- Token Usage Trend -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Token Usage Trend</h3>
-            <canvas id="tokenChart" height="180"></canvas>
+            <div class="relative" style="height: 200px;">
+                <canvas id="tokenChart"></canvas>
+            </div>
         </div>
 
         <!-- Request Trend -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Request Trend</h3>
-            <canvas id="requestChart" height="180"></canvas>
+            <div class="relative" style="height: 200px;">
+                <canvas id="requestChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -205,8 +209,8 @@
                     <p class="text-lg font-semibold text-red-600" id="p99Value">-</p>
                 </div>
             </div>
-            <div class="mt-4">
-                <canvas id="latencyChart" height="100"></canvas>
+            <div class="relative mt-4" style="height: 100px;">
+                <canvas id="latencyChart"></canvas>
             </div>
         </div>
 
@@ -239,7 +243,9 @@
         <!-- Hourly Distribution -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Hourly Pattern (Last Day)</h3>
-            <canvas id="hourlyChart" height="180"></canvas>
+            <div class="relative" style="height: 180px;">
+                <canvas id="hourlyChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -249,8 +255,8 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Model Usage (Last Day)</h3>
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <canvas id="modelPieChart" height="200"></canvas>
+                <div class="relative" style="height: 200px;">
+                    <canvas id="modelPieChart"></canvas>
                 </div>
                 <div id="modelList" class="overflow-y-auto max-h-48 text-sm space-y-2">
                     <p class="text-gray-400 text-center">No model data</p>
@@ -261,7 +267,9 @@
         <!-- Cost Breakdown -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Cost Breakdown (Last Day)</h3>
-            <canvas id="costChart" height="200"></canvas>
+            <div class="relative" style="height: 200px;">
+                <canvas id="costChart"></canvas>
+            </div>
         </div>
     </div>
 

@@ -71,9 +71,30 @@ public record UsageEvent(
         return data.cacheReadTokens();
     }
 
-    /** @return 總 token 數 */
+    // ===== 計算方法 (Calculated Methods) =====
+    // Gate 只發送原始數據，總計由 Ledger 計算
+
+    /**
+     * 計算總輸入 token 數。
+     *
+     * <p>根據 Anthropic API 文檔：
+     * {@code totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens}
+     *
+     * @return 總輸入 token 數
+     */
+    public int totalInputTokens() {
+        return data.inputTokens() + data.cacheCreationTokens() + data.cacheReadTokens();
+    }
+
+    /**
+     * 計算總 token 數。
+     *
+     * <p>{@code totalTokens = totalInputTokens + outputTokens}
+     *
+     * @return 總 token 數
+     */
     public int totalTokens() {
-        return data.totalTokens();
+        return totalInputTokens() + data.outputTokens();
     }
 
     /** @return API 延遲（毫秒） */

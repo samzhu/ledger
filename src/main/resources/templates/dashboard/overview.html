@@ -5,11 +5,22 @@
 <div th:fragment="content">
     <!-- Date Range Selection -->
     <div class="flex justify-between items-center mb-6">
-        <div class="flex items-center gap-2 text-sm text-gray-500">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <span th:text="${startDate} + ' ~ ' + ${endDate}">2025-12-01 ~ 2025-12-07</span>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span th:text="${startDate} + ' ~ ' + ${endDate}">2025-12-01 ~ 2025-12-07</span>
+            </div>
+            <!-- Settlement Button -->
+            <button id="settlementBtn"
+                    onclick="triggerSettlement()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span id="settlementBtnText">Run Settlement</span>
+            </button>
         </div>
         <div class="flex gap-2">
             <a th:href="@{/dashboard(days=7)}"
@@ -339,6 +350,59 @@
             </div>
         </div>
     </div>
+
+    <!-- Settlement Function -->
+    <script>
+        async function triggerSettlement() {
+            const btn = document.getElementById('settlementBtn');
+            const btnText = document.getElementById('settlementBtnText');
+            const originalText = btnText.textContent;
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btnText.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/api/v1/usage/settlement/trigger', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Settlement failed: ' + response.status);
+                }
+
+                const result = await response.json();
+
+                // Show success message
+                btnText.textContent = result.processedBatches + ' batches processed';
+                btn.classList.remove('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+
+                // Reload page after 1.5 seconds to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Settlement error:', error);
+                btnText.textContent = 'Error!';
+                btn.classList.remove('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                btn.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-red-50', 'text-red-700', 'border-red-200');
+                    btn.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                    btnText.textContent = originalText;
+                }, 3000);
+            }
+        }
+    </script>
 
     <!-- Chart.js Initialization -->
     <script th:inline="javascript">

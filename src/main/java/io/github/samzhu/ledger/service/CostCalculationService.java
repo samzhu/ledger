@@ -23,17 +23,23 @@ import io.github.samzhu.ledger.dto.UsageEvent;
  *   <li>Prompt Cache 讀取/寫入的優惠價格</li>
  * </ul>
  *
+ * <h3>Token 定義（依據 Anthropic API）</h3>
+ * <ul>
+ *   <li>{@code inputTokens} - 快取斷點之後的 tokens（非快取輸入，以 base rate 計費）</li>
+ *   <li>{@code cacheReadTokens} - 從快取讀取的 tokens（以 0.1× base rate 計費）</li>
+ *   <li>{@code cacheCreationTokens} - 寫入快取的 tokens（以 1.25× base rate 計費）</li>
+ * </ul>
+ *
  * <p>計算公式：
  * <pre>
- * 成本 = (billableInput × inputPrice / 1M)
- *      + (cacheRead × cacheReadPrice / 1M)
- *      + (cacheWrite × cacheWritePrice / 1M)
- *      + (output × outputPrice / 1M)
- *
- * 其中 billableInput = inputTokens - cacheReadTokens
+ * 成本 = (inputTokens × inputPrice / 1M)
+ *      + (cacheReadTokens × cacheReadPrice / 1M)
+ *      + (cacheCreationTokens × cacheWritePrice / 1M)
+ *      + (outputTokens × outputPrice / 1M)
  * </pre>
  *
- * @see <a href="https://www.anthropic.com/pricing">Anthropic Pricing</a>
+ * @see <a href="https://platform.claude.com/docs/en/about-claude/pricing">Anthropic Pricing</a>
+ * @see <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Prompt Caching</a>
  */
 @Service
 public class CostCalculationService {
@@ -55,6 +61,9 @@ public class CostCalculationService {
      * <p>若找不到對應模型的定價，會嘗試模糊比對（例如忽略版本號差異），
      * 仍找不到則回傳零成本並記錄警告。
      *
+     * <p>根據 Anthropic API，{@code inputTokens} 已經只包含非快取的輸入 tokens，
+     * 不需要再減去 {@code cacheReadTokens}。
+     *
      * @param event 用量事件
      * @return 計算的成本（美元），精確到小數點後 6 位
      */
@@ -65,14 +74,13 @@ public class CostCalculationService {
             return BigDecimal.ZERO;
         }
 
-        // 計算可計費的輸入 token（扣除從 cache 讀取的部分）
-        int billableInputTokens = event.inputTokens() - event.cacheReadTokens();
-        BigDecimal inputCost = calculateTokenCost(billableInputTokens, pricing.inputPerMillion());
+        // inputTokens 已經是非快取的輸入 tokens（快取斷點之後的部分）
+        BigDecimal inputCost = calculateTokenCost(event.inputTokens(), pricing.inputPerMillion());
 
-        // Cache 讀取成本（優惠價）
+        // Cache 讀取成本（0.1× base rate）
         BigDecimal cacheReadCost = calculateTokenCost(event.cacheReadTokens(), pricing.cacheReadPerMillion());
 
-        // Cache 寫入成本
+        // Cache 寫入成本（1.25× base rate）
         BigDecimal cacheWriteCost = calculateTokenCost(event.cacheCreationTokens(), pricing.cacheWritePerMillion());
 
         // 輸出成本
@@ -81,7 +89,7 @@ public class CostCalculationService {
         BigDecimal totalCost = inputCost.add(cacheReadCost).add(cacheWriteCost).add(outputCost);
 
         log.debug("Cost calculated: model={}, input={}, output={}, cacheRead={}, cacheWrite={}, total=${}",
-            event.model(), billableInputTokens, event.outputTokens(),
+            event.model(), event.inputTokens(), event.outputTokens(),
             event.cacheReadTokens(), event.cacheCreationTokens(), totalCost);
 
         return totalCost;
@@ -168,11 +176,9 @@ public class CostCalculationService {
                 continue;
             }
 
-            // Billable input = input - cacheRead
-            int billableInput = event.inputTokens() - event.cacheReadTokens();
-
+            // inputTokens 已經是非快取的輸入（快取斷點之後的部分）
             inputCost = inputCost.add(
-                BigDecimal.valueOf(billableInput)
+                BigDecimal.valueOf(event.inputTokens())
                     .multiply(pricing.inputPerMillion())
                     .divide(ONE_MILLION, 6, RoundingMode.HALF_UP));
 

@@ -59,18 +59,36 @@ ledger:
       output-per-million: 15.00
       cache-read-per-million: 0.30
       cache-write-per-million: 3.75
+    # Claude Sonnet 4.5
+    claude-sonnet-4-5-20250929:
+      input-per-million: 3.00
+      output-per-million: 15.00
+      cache-read-per-million: 0.30
+      cache-write-per-million: 3.75
     # Claude Opus 4
     claude-opus-4-20250514:
       input-per-million: 15.00
       output-per-million: 75.00
       cache-read-per-million: 1.50
       cache-write-per-million: 18.75
+    # Claude Opus 4.5 (注意：與 Opus 4/4.1 不同！$5/$25)
+    claude-opus-4-5-20251101:
+      input-per-million: 5.00
+      output-per-million: 25.00
+      cache-read-per-million: 0.50
+      cache-write-per-million: 6.25
     # Claude Haiku 3.5
     claude-haiku-3-5-20241022:
       input-per-million: 0.80
       output-per-million: 4.00
       cache-read-per-million: 0.08
       cache-write-per-million: 1.00
+    # Claude Haiku 4.5
+    claude-haiku-4-5-20251001:
+      input-per-million: 1.00
+      output-per-million: 5.00
+      cache-read-per-million: 0.10
+      cache-write-per-million: 1.25
   # 延遲百分位計算設定
   latency:
     digest-compression: 100   # T-Digest 壓縮因子 (50-200)，值越高精度越高但記憶體使用越多

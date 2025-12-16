@@ -55,10 +55,10 @@ class CostCalculationServiceTest {
 
     @Test
     void shouldCalculateSonnetCost() {
-        // Given: 1000 input tokens, 500 output tokens
+        // Given: 1000 非快取輸入 tokens, 500 輸出 tokens
         UsageEvent event = createEvent(
             "claude-sonnet-4-20250514",
-            1000, 500, 0, 0, 1500
+            1000, 500, 0, 0
         );
 
         // When
@@ -73,10 +73,10 @@ class CostCalculationServiceTest {
 
     @Test
     void shouldCalculateOpusCost() {
-        // Given: 2000 input tokens, 1000 output tokens
+        // Given: 2000 非快取輸入 tokens, 1000 輸出 tokens
         UsageEvent event = createEvent(
             "claude-opus-4-20250514",
-            2000, 1000, 0, 0, 3000
+            2000, 1000, 0, 0
         );
 
         // When
@@ -91,22 +91,23 @@ class CostCalculationServiceTest {
 
     @Test
     void shouldCalculateCostWithCacheTokens() {
-        // Given: 1000 input (500 from cache read), 100 cache write, 500 output
+        // Given: 1000 非快取輸入, 500 快取讀取, 100 快取寫入, 500 輸出
+        // 新語意: inputTokens 已經是非快取的輸入（快取斷點之後的部分）
         UsageEvent event = createEvent(
             "claude-sonnet-4-20250514",
-            1000, 500, 100, 500, 1600
+            1000, 500, 100, 500
         );
 
         // When
         BigDecimal cost = costService.calculateCost(event);
 
         // Then
-        // Billable input (1000 - 500 cache read): 500 * 3.00 / 1,000,000 = 0.0015
+        // Input (非快取): 1000 * 3.00 / 1,000,000 = 0.003
         // Cache read: 500 * 0.30 / 1,000,000 = 0.00015
         // Cache write: 100 * 3.75 / 1,000,000 = 0.000375
         // Output: 500 * 15.00 / 1,000,000 = 0.0075
-        // Total: 0.009525
-        assertThat(cost).isEqualByComparingTo(new BigDecimal("0.009525"));
+        // Total: 0.011025
+        assertThat(cost).isEqualByComparingTo(new BigDecimal("0.011025"));
     }
 
     @Test
@@ -114,7 +115,7 @@ class CostCalculationServiceTest {
         // Given: unknown model
         UsageEvent event = createEvent(
             "unknown-model",
-            1000, 500, 0, 0, 1500
+            1000, 500, 0, 0
         );
 
         // When
@@ -129,7 +130,7 @@ class CostCalculationServiceTest {
         // Given: zero tokens
         UsageEvent event = createEvent(
             "claude-sonnet-4-20250514",
-            0, 0, 0, 0, 0
+            0, 0, 0, 0
         );
 
         // When
@@ -139,24 +140,32 @@ class CostCalculationServiceTest {
         assertThat(cost).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    /**
+     * 建立測試用 UsageEvent。
+     *
+     * @param model 模型名稱
+     * @param inputTokens 非快取輸入 tokens（快取斷點之後的部分）
+     * @param outputTokens 輸出 tokens
+     * @param cacheCreationTokens 快取寫入 tokens
+     * @param cacheReadTokens 快取讀取 tokens
+     */
     private UsageEvent createEvent(String model, int inputTokens, int outputTokens,
-                                   int cacheCreationTokens, int cacheReadTokens, int totalTokens) {
+                                   int cacheCreationTokens, int cacheReadTokens) {
         UsageEventData data = new UsageEventData(
-            model,
-            "msg-1",
-            inputTokens,
-            outputTokens,
-            cacheCreationTokens,
-            cacheReadTokens,
-            totalTokens,
-            1000L,
-            false,
-            "end_turn",
-            "success",
-            null,
-            "primary",
-            "trace-1",
-            "req-1"
+            model,           // model
+            inputTokens,     // inputTokens (非快取輸入)
+            outputTokens,    // outputTokens
+            cacheCreationTokens, // cacheCreationTokens
+            cacheReadTokens, // cacheReadTokens
+            "msg-1",         // messageId
+            1000L,           // latencyMs
+            false,           // stream
+            "end_turn",      // stopReason
+            "success",       // status
+            null,            // errorType
+            "primary",       // keyAlias
+            "trace-1",       // traceId
+            "req-1"          // anthropicRequestId
         );
         return new UsageEvent("event-1", "user-1", LocalDate.now(), java.time.Instant.now(), data);
     }
