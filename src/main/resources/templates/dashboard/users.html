@@ -152,7 +152,7 @@
                         <td class="px-6 py-4 text-right text-sm text-gray-500"
                             th:text="${user.lastActiveAt() != null} ? ${#temporals.format(user.lastActiveAt(), 'yyyy-MM-dd HH:mm')} : '-'">-</td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(users)}">
+                    <tr th:if="${users.isEmpty()}">
                         <td colspan="7" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center">
                                 <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@
         </div>
 
         <!-- Table Footer -->
-        <div th:if="${!#lists.isEmpty(users)}" class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <div th:if="${!users.isEmpty()}" class="px-6 py-3 bg-gray-50 border-t border-gray-200">
             <div class="flex justify-between items-center text-sm text-gray-500">
                 <span>Total Cost: <span class="font-medium text-green-600"
                       th:text="|$${#numbers.formatDecimal(usersTotalCost, 1, 2)}|">$0.00</span></span>

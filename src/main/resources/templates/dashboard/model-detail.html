@@ -217,7 +217,7 @@
                             $<span th:text="${#numbers.formatDecimal(usage.estimatedCostUsd(), 1, 2)}">0.00</span>
                         </td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(usages)}">
+                    <tr th:if="${usages.isEmpty()}">
                         <td colspan="9" class="px-4 py-8 text-center text-gray-500">
                             No usage data for this period
                         </td>

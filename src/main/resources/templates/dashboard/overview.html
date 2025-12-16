@@ -279,7 +279,7 @@
                                 $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
                             </td>
                         </tr>
-                        <tr th:if="${#lists.isEmpty(topUsers)}">
+                        <tr th:if="${topUsers.isEmpty()}">
                             <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
                                 No user data available
                             </td>
@@ -325,7 +325,7 @@
                                 $<span th:text="${#numbers.formatDecimal(model.costUsd(), 1, 2)}">0.00</span>
                             </td>
                         </tr>
-                        <tr th:if="${lastDayStats == null || lastDayTopModels == null || #lists.isEmpty(lastDayTopModels)}">
+                        <tr th:if="${lastDayStats == null || lastDayTopModels == null || lastDayTopModels.isEmpty()}">
                             <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
                                 No model data available
                             </td>
