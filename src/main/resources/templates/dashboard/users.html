@@ -149,8 +149,11 @@
                         </td>
 
                         <!-- Last Active -->
-                        <td class="px-6 py-4 text-right text-sm text-gray-500"
-                            th:text="${user.lastActiveAt() != null} ? ${#temporals.format(user.lastActiveAt(), 'yyyy-MM-dd HH:mm')} : '-'">-</td>
+                        <td class="px-6 py-4 text-right text-sm text-gray-500">
+                            <span th:if="${user.lastActiveAt() != null}"
+                                  th:data-utc="${user.lastActiveAt()}" data-format="YYYY-MM-DD HH:mm">-</span>
+                            <span th:if="${user.lastActiveAt() == null}">-</span>
+                        </td>
                     </tr>
                     <tr th:if="${users.isEmpty()}">
                         <td colspan="7" class="px-6 py-12 text-center">

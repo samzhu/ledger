@@ -1,10 +1,12 @@
 package io.github.samzhu.ledger.controller;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,20 +49,33 @@ public class DashboardController {
     /**
      * 系統概覽頁面。
      *
-     * <p>顯示最近 N 天的系統整體用量和高用量用戶排行榜。
+     * <p>顯示指定日期範圍的系統整體用量和高用量用戶排行榜。
+     * 支援兩種日期指定方式：
+     * <ul>
+     *   <li>startDate/endDate - 明確指定日期範圍（優先使用，支援用戶時區）</li>
+     *   <li>days - 從今天往前算 N 天（向後相容，使用服務器時區）</li>
+     * </ul>
      *
      * @param model Spring MVC Model
-     * @param days 顯示天數（預設 7 天）
+     * @param days 顯示天數（預設 7 天，當 startDate/endDate 未指定時使用）
+     * @param startDate 起始日期（ISO 格式 YYYY-MM-DD）
+     * @param endDate 結束日期（ISO 格式 YYYY-MM-DD）
+     * @param timezone 用戶時區（如 Asia/Taipei），用於 days 計算
      * @return 視圖名稱
      */
     @GetMapping
     public String overview(Model model,
-            @RequestParam(defaultValue = "7") int days) {
+            @RequestParam(defaultValue = "7") int days,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String timezone) {
 
-        log.info("Dashboard request: overview, days={}", days);
+        // 計算日期範圍
+        LocalDate[] dateRange = calculateDateRange(startDate, endDate, days, timezone);
+        startDate = dateRange[0];
+        endDate = dateRange[1];
 
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        log.info("Dashboard request: overview, dateRange={} to {}, days={}", startDate, endDate, days);
 
         List<SystemStats> stats = queryService.getSystemDailyStats(startDate, endDate);
         List<UserQuota> topUsers = queryService.getTopUsers(10);
@@ -169,22 +184,30 @@ public class DashboardController {
     /**
      * 用戶詳情頁面。
      *
-     * <p>顯示單一用戶的累計統計和最近 N 天的每日用量。
+     * <p>顯示單一用戶的累計統計和指定日期範圍的每日用量。
      *
      * @param userId 用戶 ID
-     * @param days 顯示天數（預設 7 天）
+     * @param days 顯示天數（預設 7 天，當 startDate/endDate 未指定時使用）
+     * @param startDate 起始日期（ISO 格式 YYYY-MM-DD）
+     * @param endDate 結束日期（ISO 格式 YYYY-MM-DD）
+     * @param timezone 用戶時區（如 Asia/Taipei）
      * @param model Spring MVC Model
      * @return 視圖名稱
      */
     @GetMapping("/users/{userId}")
     public String userDetail(@PathVariable String userId,
             @RequestParam(defaultValue = "7") int days,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String timezone,
             Model model) {
 
-        log.info("Dashboard request: userDetail userId={}, days={}", userId, days);
+        // 計算日期範圍
+        LocalDate[] dateRange = calculateDateRange(startDate, endDate, days, timezone);
+        startDate = dateRange[0];
+        endDate = dateRange[1];
 
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        log.info("Dashboard request: userDetail userId={}, dateRange={} to {}", userId, startDate, endDate);
 
         List<DailyUserUsage> usages = queryService.getUserDailyUsage(userId, startDate, endDate);
         UserQuota quota = queryService.getUserQuota(userId).orElse(null);
@@ -209,17 +232,25 @@ public class DashboardController {
      * <p>顯示所有 LLM 模型的使用統計列表。
      *
      * @param model Spring MVC Model
-     * @param days 顯示天數（預設 7 天）
+     * @param days 顯示天數（預設 7 天，當 startDate/endDate 未指定時使用）
+     * @param startDate 起始日期（ISO 格式 YYYY-MM-DD）
+     * @param endDate 結束日期（ISO 格式 YYYY-MM-DD）
+     * @param timezone 用戶時區（如 Asia/Taipei）
      * @return 視圖名稱
      */
     @GetMapping("/models")
     public String models(Model model,
-            @RequestParam(defaultValue = "7") int days) {
+            @RequestParam(defaultValue = "7") int days,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String timezone) {
 
-        log.info("Dashboard request: models, days={}", days);
+        // 計算日期範圍
+        LocalDate[] dateRange = calculateDateRange(startDate, endDate, days, timezone);
+        startDate = dateRange[0];
+        endDate = dateRange[1];
 
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        log.info("Dashboard request: models, dateRange={} to {}", startDate, endDate);
 
         List<ModelSummary> modelSummaries = queryService.getAllModels(days);
 
@@ -253,19 +284,27 @@ public class DashboardController {
      * <p>顯示單一模型的詳細用量統計和趨勢圖表。
      *
      * @param modelName 模型名稱
-     * @param days 顯示天數（預設 7 天）
+     * @param days 顯示天數（預設 7 天，當 startDate/endDate 未指定時使用）
+     * @param startDate 起始日期（ISO 格式 YYYY-MM-DD）
+     * @param endDate 結束日期（ISO 格式 YYYY-MM-DD）
+     * @param timezone 用戶時區（如 Asia/Taipei）
      * @param model Spring MVC Model
      * @return 視圖名稱
      */
     @GetMapping("/models/{modelName}")
     public String modelDetail(@PathVariable String modelName,
             @RequestParam(defaultValue = "7") int days,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String timezone,
             Model model) {
 
-        log.info("Dashboard request: modelDetail modelName={}, days={}", modelName, days);
+        // 計算日期範圍
+        LocalDate[] dateRange = calculateDateRange(startDate, endDate, days, timezone);
+        startDate = dateRange[0];
+        endDate = dateRange[1];
 
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        log.info("Dashboard request: modelDetail modelName={}, dateRange={} to {}", modelName, startDate, endDate);
 
         List<DailyModelUsage> usages = queryService.getModelDailyUsage(modelName, startDate, endDate);
 
@@ -299,5 +338,56 @@ public class DashboardController {
         log.debug("Model detail loaded: modelName={}, {} daily records", modelName, usages.size());
 
         return "dashboard/model-detail";
+    }
+
+    /**
+     * 計算日期範圍。
+     *
+     * <p>優先使用明確指定的 startDate/endDate，
+     * 若未指定則根據 days 和 timezone 計算。
+     *
+     * @param startDate 起始日期（可為 null）
+     * @param endDate 結束日期（可為 null）
+     * @param days 天數（當日期未指定時使用）
+     * @param timezone 時區 ID（如 "Asia/Taipei"），null 時使用 UTC
+     * @return [startDate, endDate] 陣列
+     */
+    private LocalDate[] calculateDateRange(LocalDate startDate, LocalDate endDate, int days, String timezone) {
+        // 如果明確指定了日期範圍，直接使用
+        if (startDate != null && endDate != null) {
+            return new LocalDate[] { startDate, endDate };
+        }
+
+        // 根據時區計算「今天」
+        ZoneId zone = parseTimezone(timezone);
+        LocalDate today = LocalDate.now(zone);
+
+        // 計算日期範圍
+        if (endDate == null) {
+            endDate = today;
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(days - 1);
+        }
+
+        return new LocalDate[] { startDate, endDate };
+    }
+
+    /**
+     * 解析時區 ID。
+     *
+     * @param timezone 時區 ID（如 "Asia/Taipei"）
+     * @return ZoneId，若無效則回傳 UTC
+     */
+    private ZoneId parseTimezone(String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return ZoneId.of("UTC");
+        }
+        try {
+            return ZoneId.of(timezone);
+        } catch (Exception e) {
+            log.warn("Invalid timezone '{}', using UTC", timezone);
+            return ZoneId.of("UTC");
+        }
     }
 }
