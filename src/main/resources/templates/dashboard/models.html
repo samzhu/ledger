@@ -56,7 +56,7 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(models.stream().mapToInt(m -> m.totalRequestCount()).sum(), 0, 'COMMA')}">0</p>
+               th:text="${#numbers.formatInteger(modelsTotalRequests, 0, 'COMMA')}">0</p>
         </div>
 
         <!-- Total Tokens -->
@@ -70,7 +70,7 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(models.stream().mapToLong(m -> m.totalTokens()).sum(), 0, 'COMMA')}">0</p>
+               th:text="${#numbers.formatInteger(modelsTotalTokens, 0, 'COMMA')}">0</p>
         </div>
 
         <!-- Total Cost -->
@@ -84,7 +84,7 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-green-600">
-                $<span th:text="${#numbers.formatDecimal(models.stream().map(m -> m.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+                $<span th:text="${#numbers.formatDecimal(modelsTotalCost, 1, 2)}">0.00</span>
             </p>
         </div>
     </div>

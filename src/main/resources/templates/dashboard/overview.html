@@ -43,7 +43,7 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(stats.stream().mapToInt(s -> s.totalRequestCount()).sum(), 0, 'COMMA')}">0</p>
+               th:text="${#numbers.formatInteger(summaryTotalRequests, 0, 'COMMA')}">0</p>
             <div class="mt-2 flex items-center gap-1">
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                       th:classappend="${stats.isEmpty()} ? 'bg-gray-100 text-gray-600' : (stats.get(stats.size()-1).successRate() >= 95 ? 'bg-green-100 text-green-700' : (stats.get(stats.size()-1).successRate() >= 90 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'))">
@@ -65,11 +65,11 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-gray-800"
-               th:text="${#numbers.formatInteger(stats.stream().mapToLong(s -> s.totalTokens()).sum(), 0, 'COMMA')}">0</p>
+               th:text="${#numbers.formatInteger(summaryTotalTokens, 0, 'COMMA')}">0</p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'In: ' + #numbers.formatInteger(stats.stream().mapToLong(s -> s.totalInputTokens()).sum(), 0, 'COMMA')">In: 0</span>
+                <span th:text="'In: ' + #numbers.formatInteger(summaryTotalInputTokens, 0, 'COMMA')">In: 0</span>
                 <span class="mx-1">|</span>
-                <span th:text="'Out: ' + #numbers.formatInteger(stats.stream().mapToLong(s -> s.totalOutputTokens()).sum(), 0, 'COMMA')">Out: 0</span>
+                <span th:text="'Out: ' + #numbers.formatInteger(summaryTotalOutputTokens, 0, 'COMMA')">Out: 0</span>
             </div>
         </div>
 
@@ -84,10 +84,10 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-green-600">
-                $<span th:text="${#numbers.formatDecimal(stats.stream().map(s -> s.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+                $<span th:text="${#numbers.formatDecimal(summaryTotalCost, 1, 2)}">0.00</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:text="'Avg: $' + #numbers.formatDecimal(stats.isEmpty() ? 0 : stats.stream().map(s -> s.totalEstimatedCostUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)).divide(T(java.math.BigDecimal).valueOf(stats.size()), 2, T(java.math.RoundingMode).HALF_UP), 1, 2) + '/day'">Avg: $0.00/day</span>
+                <span th:text="'Avg: $' + #numbers.formatDecimal(summaryAvgDailyCost, 1, 2) + '/day'">Avg: $0.00/day</span>
             </div>
         </div>
 
@@ -118,14 +118,13 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-gray-800">
-                <span th:if="${!stats.isEmpty()}" th:text="${#numbers.formatDecimal(stats.stream().mapToDouble(s -> s.avgLatencyMs()).average().orElse(0), 0, 0)}">0</span>
-                <span th:if="${stats.isEmpty()}">0</span>
+                <span th:text="${#numbers.formatDecimal(summaryAvgLatency, 0, 0)}">0</span>
                 <span class="text-sm font-normal text-gray-500">ms</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:if="${!stats.isEmpty()}" th:text="'P50: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p50LatencyMs()).average().orElse(0), 0, 0) + 'ms'">P50: 0ms</span>
+                <span th:text="'P50: ' + #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">P50: 0ms</span>
                 <span class="mx-1">|</span>
-                <span th:if="${!stats.isEmpty()}" th:text="'P90: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p90LatencyMs()).average().orElse(0), 0, 0) + 'ms'">P90: 0ms</span>
+                <span th:text="'P90: ' + #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">P90: 0ms</span>
             </div>
         </div>
 
@@ -140,10 +139,10 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-emerald-600">
-                $<span th:text="${#numbers.formatDecimal(stats.stream().map(s -> s.systemCacheSavedUsd()).reduce(T(java.math.BigDecimal).ZERO, (a, b) -> a.add(b)), 1, 2)}">0.00</span>
+                $<span th:text="${#numbers.formatDecimal(summaryCacheSavings, 1, 2)}">0.00</span>
             </p>
             <div class="mt-2 text-xs text-gray-500">
-                <span th:if="${!stats.isEmpty()}" th:text="'Hit Rate: ' + #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100, 1, 1) + '%'">Hit Rate: 0%</span>
+                <span th:text="'Hit Rate: ' + #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">Hit Rate: 0%</span>
             </div>
         </div>
     </div>
@@ -176,11 +175,11 @@
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-600">Cache Hit Rate</span>
                     <span class="text-sm font-medium text-cyan-600"
-                          th:text="${stats.isEmpty()} ? 'N/A' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100, 1, 1) + '%'">0%</span>
+                          th:text="${stats.isEmpty()} ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div class="bg-cyan-500 h-2.5 rounded-full transition-all duration-500"
-                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + (stats.stream().mapToDouble(s -> s.systemCacheHitRate()).average().orElse(0) * 100) + '%'"></div>
+                         th:style="${stats.isEmpty()} ? 'width: 0%' : 'width: ' + (summaryAvgCacheHitRate * 100) + '%'"></div>
                 </div>
             </div>
 
@@ -191,22 +190,22 @@
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P50</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p50LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P90</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p90LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">P99</p>
                         <p class="text-sm font-semibold text-orange-600"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.p99LatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'">0ms</p>
                     </div>
                     <div class="text-center p-2 bg-gray-50 rounded-lg">
                         <p class="text-xs text-gray-500">Avg</p>
                         <p class="text-sm font-semibold text-gray-800"
-                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(stats.stream().mapToDouble(s -> s.avgLatencyMs()).average().orElse(0), 0, 0) + 'ms'">0ms</p>
+                           th:text="${stats.isEmpty()} ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'">0ms</p>
                     </div>
                 </div>
             </div>

@@ -65,6 +65,25 @@ public class DashboardController {
         List<SystemStats> stats = queryService.getSystemDailyStats(startDate, endDate);
         List<UserQuota> topUsers = queryService.getTopUsers(10);
 
+        // Pre-compute summary statistics (SpEL doesn't support lambdas)
+        int totalRequests = stats.stream().mapToInt(SystemStats::totalRequestCount).sum();
+        long totalTokens = stats.stream().mapToLong(SystemStats::totalTokens).sum();
+        long totalInputTokens = stats.stream().mapToLong(SystemStats::totalInputTokens).sum();
+        long totalOutputTokens = stats.stream().mapToLong(SystemStats::totalOutputTokens).sum();
+        java.math.BigDecimal totalCost = stats.stream()
+            .map(SystemStats::totalEstimatedCostUsd)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        java.math.BigDecimal avgDailyCost = stats.isEmpty() ? java.math.BigDecimal.ZERO
+            : totalCost.divide(java.math.BigDecimal.valueOf(stats.size()), 2, java.math.RoundingMode.HALF_UP);
+        double avgLatency = stats.stream().mapToDouble(SystemStats::avgLatencyMs).average().orElse(0);
+        double p50Latency = stats.stream().mapToDouble(SystemStats::p50LatencyMs).average().orElse(0);
+        double p90Latency = stats.stream().mapToDouble(SystemStats::p90LatencyMs).average().orElse(0);
+        double p99Latency = stats.stream().mapToDouble(SystemStats::p99LatencyMs).average().orElse(0);
+        java.math.BigDecimal cacheSavings = stats.stream()
+            .map(SystemStats::systemCacheSavedUsd)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        double avgCacheHitRate = stats.stream().mapToDouble(SystemStats::systemCacheHitRate).average().orElse(0);
+
         model.addAttribute("currentPage", "overview");
         model.addAttribute("pageTitle", "System Overview");
         model.addAttribute("stats", stats);
@@ -72,6 +91,20 @@ public class DashboardController {
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
         model.addAttribute("days", days);
+
+        // Add pre-computed values for template
+        model.addAttribute("summaryTotalRequests", totalRequests);
+        model.addAttribute("summaryTotalTokens", totalTokens);
+        model.addAttribute("summaryTotalInputTokens", totalInputTokens);
+        model.addAttribute("summaryTotalOutputTokens", totalOutputTokens);
+        model.addAttribute("summaryTotalCost", totalCost);
+        model.addAttribute("summaryAvgDailyCost", avgDailyCost);
+        model.addAttribute("summaryAvgLatency", avgLatency);
+        model.addAttribute("summaryP50Latency", p50Latency);
+        model.addAttribute("summaryP90Latency", p90Latency);
+        model.addAttribute("summaryP99Latency", p99Latency);
+        model.addAttribute("summaryCacheSavings", cacheSavings);
+        model.addAttribute("summaryAvgCacheHitRate", avgCacheHitRate);
 
         log.debug("Overview loaded: {} stats records, {} top users", stats.size(), topUsers.size());
 
@@ -92,9 +125,27 @@ public class DashboardController {
 
         List<UserQuota> users = queryService.getAllUsers();
 
+        // Pre-compute summary statistics (SpEL doesn't support lambdas)
+        long usersQuotaEnabledCount = users.stream()
+            .filter(u -> u.quotaConfig() != null && u.quotaConfig().enabled())
+            .count();
+        long usersQuotaExceededCount = users.stream()
+            .filter(UserQuota::quotaExceeded)
+            .count();
+        long usersTotalTokens = users.stream().mapToLong(UserQuota::totalTokens).sum();
+        java.math.BigDecimal usersTotalCost = users.stream()
+            .map(UserQuota::totalEstimatedCostUsd)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
         model.addAttribute("currentPage", "users");
         model.addAttribute("pageTitle", "User Usage");
         model.addAttribute("users", users);
+
+        // Add pre-computed values for template
+        model.addAttribute("usersQuotaEnabledCount", usersQuotaEnabledCount);
+        model.addAttribute("usersQuotaExceededCount", usersQuotaExceededCount);
+        model.addAttribute("usersTotalTokens", usersTotalTokens);
+        model.addAttribute("usersTotalCost", usersTotalCost);
 
         log.debug("Users page loaded: {} users", users.size());
 
@@ -158,12 +209,24 @@ public class DashboardController {
 
         List<ModelSummary> modelSummaries = queryService.getAllModels(days);
 
+        // Pre-compute summary statistics (SpEL doesn't support lambdas)
+        int modelsTotalRequests = modelSummaries.stream().mapToInt(ModelSummary::totalRequestCount).sum();
+        long modelsTotalTokens = modelSummaries.stream().mapToLong(ModelSummary::totalTokens).sum();
+        java.math.BigDecimal modelsTotalCost = modelSummaries.stream()
+            .map(ModelSummary::totalEstimatedCostUsd)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
         model.addAttribute("currentPage", "models");
         model.addAttribute("pageTitle", "Model Usage");
         model.addAttribute("models", modelSummaries);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
         model.addAttribute("days", days);
+
+        // Add pre-computed values for template
+        model.addAttribute("modelsTotalRequests", modelsTotalRequests);
+        model.addAttribute("modelsTotalTokens", modelsTotalTokens);
+        model.addAttribute("modelsTotalCost", modelsTotalCost);
 
         log.debug("Models page loaded: {} models", modelSummaries.size());
 
