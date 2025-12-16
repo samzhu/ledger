@@ -2,6 +2,7 @@ package io.github.samzhu.ledger.service;
 
 import java.util.List;
 
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -118,10 +119,83 @@ public class BatchSettlementService {
      */
     public int triggerSettlement() {
         log.info("Manual settlement triggered");
-        List<RawEventBatch> pendingBatches = rawEventBatchRepository.findByProcessedFalseOrderByCreatedAtAsc();
+
+        // Debug: 先查詢所有文件數量
+        long totalCount = rawEventBatchRepository.count();
+        log.info("Manual settlement: total documents in raw_event_batches = {}", totalCount);
+
+        // Debug: 用 MongoTemplate 直接查詢原始 Document，看欄位名稱和值
+        Query allDocsQuery = new Query().limit(1);
+        List<Document> rawDocs = mongoTemplate.find(allDocsQuery, Document.class, "raw_event_batches");
+        if (!rawDocs.isEmpty()) {
+            Document doc = rawDocs.get(0);
+            log.info("Manual settlement: raw document fields = {}", doc.keySet());
+            log.info("Manual settlement: processed field value = {}, type = {}",
+                doc.get("processed"),
+                doc.get("processed") != null ? doc.get("processed").getClass().getSimpleName() : "null");
+
+            // 查看 events 欄位結構
+            Object events = doc.get("events");
+            if (events instanceof List<?> eventList && !eventList.isEmpty()) {
+                Object firstEvent = eventList.get(0);
+                if (firstEvent instanceof Document eventDoc) {
+                    log.info("Manual settlement: first event fields = {}", eventDoc.keySet());
+                    Object data = eventDoc.get("data");
+                    if (data instanceof Document dataDoc) {
+                        log.info("Manual settlement: event.data fields = {}", dataDoc.keySet());
+                    }
+                }
+            }
+        }
+
+        // Debug: 用 MongoTemplate 直接查詢，看是否有 processed=false 的文件
+        Query debugQuery = Query.query(Criteria.where("processed").is(false));
+        long pendingCount = mongoTemplate.count(debugQuery, "raw_event_batches");
+        log.info("Manual settlement: [MongoTemplate count] processed=false => {}", pendingCount);
+
+        // === 比較三種查詢方式 ===
+
+        // 方式 1: Derived Query (方法名稱推導)
+        List<RawEventBatch> derivedResult;
+        try {
+            derivedResult = rawEventBatchRepository.findByProcessedFalseOrderByCreatedAtAsc();
+            log.info("Manual settlement: [Derived Query] findByProcessedFalse => {} batches", derivedResult.size());
+        } catch (Exception e) {
+            log.error("Manual settlement: [Derived Query] failed: {}", e.getMessage(), e);
+            derivedResult = List.of();
+        }
+
+        // 方式 2: @Query 註解 (明確 JSON 查詢)
+        List<RawEventBatch> queryAnnotationResult;
+        try {
+            queryAnnotationResult = rawEventBatchRepository.findPendingBatchesWithQuery();
+            log.info("Manual settlement: [@Query annotation] findPendingBatchesWithQuery => {} batches", queryAnnotationResult.size());
+        } catch (Exception e) {
+            log.error("Manual settlement: [@Query annotation] failed: {}", e.getMessage(), e);
+            queryAnnotationResult = List.of();
+        }
+
+        // 方式 3: @Query 查詢所有 (驗證反序列化)
+        List<RawEventBatch> allBatchesResult;
+        try {
+            allBatchesResult = rawEventBatchRepository.findAllBatchesWithQuery();
+            log.info("Manual settlement: [@Query findAll] findAllBatchesWithQuery => {} batches", allBatchesResult.size());
+            if (!allBatchesResult.isEmpty()) {
+                RawEventBatch firstBatch = allBatchesResult.get(0);
+                log.info("Manual settlement: [@Query findAll] first batch: id={}, processed={}, eventCount={}",
+                    firstBatch.id(), firstBatch.processed(), firstBatch.eventCount());
+            }
+        } catch (Exception e) {
+            log.error("Manual settlement: [@Query findAll] failed: {}", e.getMessage(), e);
+            allBatchesResult = List.of();
+        }
+
+        // 使用 @Query 結果（優先使用明確定義的查詢）
+        List<RawEventBatch> pendingBatches = !queryAnnotationResult.isEmpty() ? queryAnnotationResult : derivedResult;
+        log.info("Manual settlement: using {} batches for processing", pendingBatches.size());
 
         if (pendingBatches.isEmpty()) {
-            log.info("Manual settlement: no pending batches");
+            log.info("Manual settlement: no pending batches found (total docs: {})", totalCount);
             return 0;
         }
 
@@ -130,12 +204,22 @@ public class BatchSettlementService {
         int count = 0;
         for (RawEventBatch batch : pendingBatches) {
             try {
-                aggregationService.processBatch(batch.events());
+                log.info("Manual settlement: processing batch id={}, eventCount={}", batch.id(), batch.eventCount());
+                List<UsageEvent> events = batch.events();
+                log.info("Manual settlement: batch {} has {} events to process", batch.id(), events.size());
+
+                if (!events.isEmpty()) {
+                    UsageEvent firstEvent = events.get(0);
+                    log.info("Manual settlement: first event - eventId={}, userId={}, model={}, inputTokens={}",
+                        firstEvent.eventId(), firstEvent.userId(), firstEvent.model(), firstEvent.inputTokens());
+                }
+
+                aggregationService.processBatch(events);
                 markAsProcessed(batch.id());
                 count++;
-                log.debug("Manual settlement: batch {} processed", batch.id());
+                log.info("Manual settlement: batch {} processed successfully", batch.id());
             } catch (Exception e) {
-                log.error("Manual settlement failed for batch {}: {}", batch.id(), e.getMessage());
+                log.error("Manual settlement failed for batch {}: {}", batch.id(), e.getMessage(), e);
             }
         }
 
