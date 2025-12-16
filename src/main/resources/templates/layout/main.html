@@ -41,27 +41,6 @@
     <script>
         // 時區處理工具 (使用 Day.js)
         const TimezoneUtils = {
-            // 取得 IANA 時區名稱 (如 Asia/Taipei)
-            getTimezone: () => dayjs.tz.guess(),
-
-            // 取得 UTC offset 字串 (如 +08:00)
-            getOffset: () => dayjs().format('Z'),
-
-            // 取得用戶本地日期 (YYYY-MM-DD 格式)
-            getLocalDate: (daysOffset = 0) =>
-                dayjs().add(daysOffset, 'day').format('YYYY-MM-DD'),
-
-            // 取得 ISO 8601 帶 offset 格式 (如 2025-12-16T14:30:00+08:00)
-            getLocalDateTime: () => dayjs().format(),
-
-            // 建構帶時區的 URL（只傳 days + timezone，後端計算日期範圍）
-            buildUrl: (basePath, days) => {
-                const url = new URL(basePath, window.location.origin);
-                url.searchParams.set('days', days);
-                url.searchParams.set('timezone', TimezoneUtils.getTimezone());
-                return url.pathname + url.search;
-            },
-
             // UTC 轉本地時間顯示
             formatLocalTime: (utcString, format = 'YYYY-MM-DD HH:mm') => {
                 if (!utcString) return '-';
@@ -75,24 +54,14 @@
                     const fmt = el.dataset.format || 'YYYY-MM-DD HH:mm';
                     el.textContent = TimezoneUtils.formatLocalTime(utc, fmt);
                 });
-            },
-
-            // 更新導航連結加上時區參數
-            initNavLinks: () => {
-                document.querySelectorAll('a[data-tz-link]').forEach(link => {
-                    const basePath = link.getAttribute('href').split('?')[0];
-                    const days = parseInt(link.dataset.days || 7);
-                    link.href = TimezoneUtils.buildUrl(basePath, days);
-                });
             }
         };
 
         // 頁面載入後初始化
         document.addEventListener('DOMContentLoaded', () => {
             TimezoneUtils.initLocalTimeElements();
-            TimezoneUtils.initNavLinks();
 
-            // 更新頁首時間顯示
+            // 更新頁首時間顯示（本地時間）
             const headerTime = document.getElementById('header-local-time');
             if (headerTime) {
                 headerTime.textContent = dayjs().format('YYYY-MM-DD HH:mm');

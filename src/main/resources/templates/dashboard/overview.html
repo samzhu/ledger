@@ -23,17 +23,17 @@
             </button>
         </div>
         <div class="flex gap-2">
-            <a th:href="@{/dashboard(days=7)}" data-tz-link data-days="7"
+            <a th:href="@{/dashboard(days=7)}"
                th:class="${days == 7} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 7 Days
             </a>
-            <a th:href="@{/dashboard(days=14)}" data-tz-link data-days="14"
+            <a th:href="@{/dashboard(days=14)}"
                th:class="${days == 14} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 14 Days
             </a>
-            <a th:href="@{/dashboard(days=30)}" data-tz-link data-days="30"
+            <a th:href="@{/dashboard(days=30)}"
                th:class="${days == 30} ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                class="px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-sm font-medium transition">
                 30 Days
