@@ -89,7 +89,7 @@ public class DashboardController {
 
         // Get the last day's stats for display (SpEL has trouble with list index access)
         SystemStats lastDayStats = stats.isEmpty() ? null : stats.get(stats.size() - 1);
-        double lastDaySuccessRate = lastDayStats != null ? lastDayStats.successRate() : 0;
+        double lastDaySuccessRate = lastDayStats != null ? lastDayStats.successRate() * 100.0 : 0;
         int lastDayPeakHour = lastDayStats != null ? lastDayStats.peakHour() : 0;
         int lastDayPeakHourRequests = lastDayStats != null ? lastDayStats.peakHourRequests() : 0;
         var lastDayTopModels = lastDayStats != null ? lastDayStats.topModels() : java.util.Collections.emptyList();

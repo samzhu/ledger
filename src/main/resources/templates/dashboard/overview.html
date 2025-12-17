@@ -413,7 +413,8 @@
         const sortedStats = [...stats].sort((a, b) => a.date.localeCompare(b.date));
         const labels = sortedStats.map(s => s.date);
         const tokenData = sortedStats.map(s => s.totalTokens);
-        const successRateData = sortedStats.map(s => s.successRate);
+        // Convert successRate from decimal (0.0-1.0) to percentage (0-100) for display
+        const successRateData = sortedStats.map(s => s.successRate * 100);
 
         // Daily Usage Trend Chart (Mixed: Bar + Line)
         new Chart(document.getElementById('dailyChart'), {
