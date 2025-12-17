@@ -11,7 +11,6 @@ import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.RawEventBatch;
 import io.github.samzhu.ledger.document.SystemStats;
 import io.github.samzhu.ledger.document.UserQuota;
-import io.github.samzhu.ledger.dto.UsageEvent;
 import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.controller.UsageApiController;
 import io.github.samzhu.ledger.service.UsageQueryService;
@@ -25,8 +24,7 @@ import io.github.samzhu.ledger.service.UsageQueryService;
  *
  * <p>需要註冊的類別（用於 Jackson JSON 序列化/反序列化）：
  * <ul>
- *   <li>{@link UsageEventData} - CloudEvents data payload，從 Gate 接收</li>
- *   <li>{@link UsageEvent} - 內部用量事件 DTO，組合 CE headers + data</li>
+ *   <li>{@link UsageEventData} - 用量事件資料，從 Gate 接收，包含 userId 和 eventTime</li>
  *   <li>{@link RawEventBatch} - 批次原始事件文件，儲存至 MongoDB</li>
  * </ul>
  *
@@ -50,7 +48,6 @@ public class NativeHintsConfig {
             // 註冊 DTO 類別供 Jackson 反射使用
             hints.reflection()
                 .registerType(UsageEventData.class, MemberCategory.values())
-                .registerType(UsageEvent.class, MemberCategory.values())
                 .registerType(RawEventBatch.class, MemberCategory.values());
 
             // 註冊 Document 類別供 Thymeleaf 模板反射使用

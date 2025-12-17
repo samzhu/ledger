@@ -1,6 +1,7 @@
 package io.github.samzhu.ledger.function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -36,7 +37,6 @@ import org.springframework.util.MimeTypeUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.github.samzhu.ledger.dto.UsageEvent;
 import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.service.EventBufferService;
 
@@ -93,9 +93,14 @@ class UsageEventFunctionTest {
     @Test
     void shouldProcessCloudEventMessage() throws Exception {
         // Given: CloudEvent data payload (as received after Spring Cloud Stream parses Structured Mode)
-        // Gate 只發送原始數據，totalTokens 由 Ledger 計算
+        // Gate 發送包含 userId 和 eventTime 的數據，totalTokens 由 Ledger 計算
+        String userId = "user-abc-123";
+        OffsetDateTime eventTime = OffsetDateTime.now();
+
         UsageEventData eventData = new UsageEventData(
-            "claude-sonnet-4-20250514",  // model
+            userId,                       // userId
+            eventTime.toInstant(),        // eventTime
+            "claude-sonnet-4-20250514",   // model
             1000,                         // inputTokens (非快取輸入)
             500,                          // outputTokens
             100,                          // cacheCreationTokens
@@ -112,8 +117,6 @@ class UsageEventFunctionTest {
         );
 
         String eventId = UUID.randomUUID().toString();
-        String userId = "user-abc-123";
-        OffsetDateTime eventTime = OffsetDateTime.now();
         URI source = URI.create("https://gate.example.com/api");
         String eventType = "io.github.samzhu.gate.usage.v1";
 
@@ -135,15 +138,14 @@ class UsageEventFunctionTest {
         inputDestination.send(message);
 
         // Then: Verify EventBufferService received the event
-        ArgumentCaptor<UsageEvent> eventCaptor = ArgumentCaptor.forClass(UsageEvent.class);
+        ArgumentCaptor<UsageEventData> eventCaptor = ArgumentCaptor.forClass(UsageEventData.class);
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             verify(mockBufferService, atLeastOnce()).addEvent(eventCaptor.capture());
         });
 
-        UsageEvent capturedEvent = eventCaptor.getValue();
+        UsageEventData capturedEvent = eventCaptor.getValue();
 
-        assertThat(capturedEvent.eventId()).isEqualTo(eventId);
         assertThat(capturedEvent.userId()).isEqualTo(userId);
         assertThat(capturedEvent.model()).isEqualTo("claude-sonnet-4-20250514");
         assertThat(capturedEvent.inputTokens()).isEqualTo(1000);
@@ -161,15 +163,18 @@ class UsageEventFunctionTest {
         assertThat(capturedEvent.keyAlias()).isEqualTo("primary-key");
         assertThat(capturedEvent.traceId()).isEqualTo("trace-456");
         assertThat(capturedEvent.messageId()).isEqualTo("msg-123");
-        assertThat(capturedEvent.anthropicRequestId()).isEqualTo("anthro-req-789");
-        assertThat(capturedEvent.date()).isEqualTo(eventTime.toLocalDate());
     }
 
     @Test
     void shouldHandleMessageWithoutTime() throws Exception {
-        // Given: CloudEvent without time header
+        // Given: CloudEvent without time header (eventTime 由 Gate 設定在 payload 中)
+        String userId = "user-xyz-789";
+        java.time.Instant eventTime = java.time.Instant.now();
+
         UsageEventData eventData = new UsageEventData(
-            "claude-haiku-3-5-20241022",  // model
+            userId,                        // userId
+            eventTime,                     // eventTime
+            "claude-haiku-3-5-20241022",   // model
             500,                           // inputTokens
             250,                           // outputTokens
             0,                             // cacheCreationTokens
@@ -186,7 +191,6 @@ class UsageEventFunctionTest {
         );
 
         String eventId = UUID.randomUUID().toString();
-        String userId = "user-xyz-789";
         byte[] payload = objectMapper.writeValueAsBytes(eventData);
 
         Message<byte[]> message = MessageBuilder.withPayload(payload)
@@ -196,32 +200,36 @@ class UsageEventFunctionTest {
             .setHeader(CloudEventMessageUtils.TYPE, "io.github.samzhu.gate.usage.v1")
             .setHeader(CloudEventMessageUtils.SUBJECT, userId)
             .setHeader(CloudEventMessageUtils.SPECVERSION, "1.0")
-            // No TIME header
+            // No TIME header (but eventTime is in payload)
             .build();
 
         // When
         inputDestination.send(message);
 
-        // Then: Should use LocalDate.now() as fallback
-        ArgumentCaptor<UsageEvent> eventCaptor = ArgumentCaptor.forClass(UsageEvent.class);
+        // Then: eventTime comes from payload now
+        ArgumentCaptor<UsageEventData> eventCaptor = ArgumentCaptor.forClass(UsageEventData.class);
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             verify(mockBufferService, atLeastOnce()).addEvent(eventCaptor.capture());
         });
 
-        UsageEvent capturedEvent = eventCaptor.getValue();
+        UsageEventData capturedEvent = eventCaptor.getValue();
 
-        assertThat(capturedEvent.eventId()).isEqualTo(eventId);
         assertThat(capturedEvent.userId()).isEqualTo(userId);
         assertThat(capturedEvent.model()).isEqualTo("claude-haiku-3-5-20241022");
-        assertThat(capturedEvent.date()).isNotNull();
+        assertThat(capturedEvent.eventTime()).isNotNull();
     }
 
     @Test
     void shouldProcessOpusModelEvent() throws Exception {
         // Given: Opus model usage event
+        String userId = "enterprise-user";
+        java.time.Instant eventTime = java.time.Instant.now();
+
         UsageEventData eventData = new UsageEventData(
-            "claude-opus-4-20250514",  // model
+            userId,                     // userId
+            eventTime,                  // eventTime
+            "claude-opus-4-20250514",   // model
             5000,                       // inputTokens
             2000,                       // outputTokens
             500,                        // cacheCreationTokens
@@ -238,8 +246,6 @@ class UsageEventFunctionTest {
         );
 
         String eventId = UUID.randomUUID().toString();
-        String userId = "enterprise-user";
-        OffsetDateTime eventTime = OffsetDateTime.now();
         byte[] payload = objectMapper.writeValueAsBytes(eventData);
 
         Message<byte[]> message = MessageBuilder.withPayload(payload)
@@ -248,7 +254,6 @@ class UsageEventFunctionTest {
             .setHeader(CloudEventMessageUtils.SOURCE, URI.create("https://gate.example.com"))
             .setHeader(CloudEventMessageUtils.TYPE, "io.github.samzhu.gate.usage.v1")
             .setHeader(CloudEventMessageUtils.SUBJECT, userId)
-            .setHeader(CloudEventMessageUtils.TIME, eventTime)
             .setHeader(CloudEventMessageUtils.SPECVERSION, "1.0")
             .build();
 
@@ -256,15 +261,15 @@ class UsageEventFunctionTest {
         inputDestination.send(message);
 
         // Then
-        ArgumentCaptor<UsageEvent> eventCaptor = ArgumentCaptor.forClass(UsageEvent.class);
+        ArgumentCaptor<UsageEventData> eventCaptor = ArgumentCaptor.forClass(UsageEventData.class);
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             verify(mockBufferService, atLeastOnce()).addEvent(eventCaptor.capture());
         });
 
-        UsageEvent capturedEvent = eventCaptor.getValue();
+        UsageEventData capturedEvent = eventCaptor.getValue();
 
-        assertThat(capturedEvent.eventId()).isEqualTo(eventId);
+        assertThat(capturedEvent.userId()).isEqualTo(userId);
         assertThat(capturedEvent.model()).isEqualTo("claude-opus-4-20250514");
         assertThat(capturedEvent.inputTokens()).isEqualTo(5000);
         assertThat(capturedEvent.outputTokens()).isEqualTo(2000);
@@ -275,8 +280,13 @@ class UsageEventFunctionTest {
     @Test
     void shouldHandleErrorStatus() throws Exception {
         // Given: Event with error status
+        String userId = "error-user";
+        java.time.Instant eventTime = java.time.Instant.now();
+
         UsageEventData eventData = new UsageEventData(
-            "claude-sonnet-4-20250514",  // model
+            userId,                       // userId
+            eventTime,                    // eventTime
+            "claude-sonnet-4-20250514",   // model
             100,                          // inputTokens
             0,                            // outputTokens
             0,                            // cacheCreationTokens
@@ -293,7 +303,6 @@ class UsageEventFunctionTest {
         );
 
         String eventId = UUID.randomUUID().toString();
-        String userId = "error-user";
         byte[] payload = objectMapper.writeValueAsBytes(eventData);
 
         Message<byte[]> message = MessageBuilder.withPayload(payload)
@@ -309,15 +318,15 @@ class UsageEventFunctionTest {
         inputDestination.send(message);
 
         // Then
-        ArgumentCaptor<UsageEvent> eventCaptor = ArgumentCaptor.forClass(UsageEvent.class);
+        ArgumentCaptor<UsageEventData> eventCaptor = ArgumentCaptor.forClass(UsageEventData.class);
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             verify(mockBufferService, atLeastOnce()).addEvent(eventCaptor.capture());
         });
 
-        UsageEvent capturedEvent = eventCaptor.getValue();
+        UsageEventData capturedEvent = eventCaptor.getValue();
 
-        assertThat(capturedEvent.eventId()).isEqualTo(eventId);
+        assertThat(capturedEvent.userId()).isEqualTo(userId);
         assertThat(capturedEvent.status()).isEqualTo("error");
         assertThat(capturedEvent.errorType()).isEqualTo("rate_limit_error");
         assertThat(capturedEvent.isSuccess()).isFalse();

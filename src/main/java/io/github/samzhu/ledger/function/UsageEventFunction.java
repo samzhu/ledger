@@ -1,8 +1,5 @@
 package io.github.samzhu.ledger.function;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -12,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 
-import io.github.samzhu.ledger.dto.UsageEvent;
 import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.service.EventBufferService;
 
@@ -32,8 +28,8 @@ import io.github.samzhu.ledger.service.EventBufferService;
  *   <li>CloudEvent data → Message Payload（自動轉換為 POJO）</li>
  * </ul>
  *
- * <p>此實作使用 {@link CloudEventMessageUtils} 從 headers 提取 CE attributes，
- * 不論原始格式是 Structured 或 Binary Mode 都能正確處理。
+ * <p>Gate 已將 {@code userId} 和 {@code eventTime} 包含在 data payload 中，
+ * 因此 Ledger 不再需要從 CloudEvent headers 提取這些資訊。
  *
  * <p>Binding name: {@code usageEventConsumer-in-0}
  *
@@ -55,13 +51,12 @@ public class UsageEventFunction {
      * CloudEvents 用量事件消費者 Bean。
      *
      * <p>Spring Cloud Stream 會將此 Bean 綁定到 {@code usageEventConsumer-in-0}。
-     * 訊息的 CloudEvent attributes 在 headers 中，payload 自動轉換為 {@link UsageEventData}。
+     * Payload 自動轉換為 {@link UsageEventData}，其中包含 {@code userId} 和 {@code eventTime}。
      *
      * <p>處理流程：
      * <ol>
-     *   <li>從 headers 提取 CE attributes (id, subject, time)</li>
-     *   <li>取得自動轉換的 payload</li>
-     *   <li>組合成 {@link UsageEvent} 並加入緩衝區</li>
+     *   <li>取得自動轉換的 payload（{@link UsageEventData}）</li>
+     *   <li>將事件加入緩衝區</li>
      * </ol>
      *
      * <p>錯誤處理：不重新拋出例外，避免訊息重複投遞迴圈。
@@ -72,36 +67,21 @@ public class UsageEventFunction {
     public Consumer<Message<UsageEventData>> usageEventConsumer() {
         return message -> {
             try {
-                // 從 headers 提取 CloudEvent attributes
-                String eventId = CloudEventMessageUtils.getId(message);
-                String subject = CloudEventMessageUtils.getSubject(message);
-                OffsetDateTime time = CloudEventMessageUtils.getTime(message);
-
-                log.debug("CloudEvent received: id={}, type={}, source={}, subject={}",
-                    eventId,
-                    CloudEventMessageUtils.getType(message),
-                    CloudEventMessageUtils.getSource(message),
-                    subject);
-
                 // Payload 由 Spring 自動轉換為 UsageEventData
                 UsageEventData data = message.getPayload();
 
-                Instant timestamp = time != null ? time.toInstant() : Instant.now();
-                UsageEvent event = new UsageEvent(
-                    eventId,
-                    subject,  // userId 在 CE subject 中
-                    time != null ? time.toLocalDate() : LocalDate.now(),
-                    timestamp,
-                    data
-                );
+                log.debug("CloudEvent received: id={}, type={}, source={}, userId={}",
+                    CloudEventMessageUtils.getId(message),
+                    CloudEventMessageUtils.getType(message),
+                    CloudEventMessageUtils.getSource(message),
+                    data.userId());
 
-                bufferService.addEvent(event);
+                bufferService.addEvent(data);
 
-                // 使用 UsageEvent 的計算方法取得總 tokens
-                log.debug("Event consumed: eventId={}, userId={}, model={}, tokens={}",
-                    eventId, subject, event.model(), event.totalTokens());
+                log.debug("Event consumed: userId={}, model={}, tokens={}",
+                    data.userId(), data.model(), data.totalTokens());
             } catch (Exception e) {
-                log.error("Failed to process CloudEvent: eventId={}, error={}",
+                log.error("Failed to process CloudEvent: id={}, error={}",
                     CloudEventMessageUtils.getId(message), e.getMessage(), e);
                 // 不重新拋出例外，避免訊息重複投遞
             }

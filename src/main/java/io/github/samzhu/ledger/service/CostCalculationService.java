@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import io.github.samzhu.ledger.config.LedgerProperties;
 import io.github.samzhu.ledger.config.LedgerProperties.ModelPricing;
 import io.github.samzhu.ledger.document.DailyUserUsage.CostBreakdown;
-import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 
 /**
@@ -74,20 +74,20 @@ public class CostCalculationService {
      * @return 計算的成本（美元），精確到小數點後 6 位
      * @throws UnknownModelPricingException 若模型非 null 但找不到定價配置
      */
-    public BigDecimal calculateCost(UsageEvent event) {
+    public BigDecimal calculateCost(UsageEventData event) {
         // Error 事件可能沒有 model，這是允許的
         if (event.model() == null) {
-            log.debug("Event has null model (likely error event), returning zero cost: eventId={}",
-                event.eventId());
+            log.debug("Event has null model (likely error event), returning zero cost: traceId={}",
+                event.traceId());
             return BigDecimal.ZERO;
         }
 
         ModelPricing pricing = findPricing(event.model());
         if (pricing == null) {
-            log.error("Unknown model pricing detected: model='{}', eventId='{}'. " +
+            log.error("Unknown model pricing detected: model='{}', traceId='{}'. " +
                 "Please add pricing configuration in application.yaml",
-                event.model(), event.eventId());
-            throw new UnknownModelPricingException(event.model(), event.eventId());
+                event.model(), event.traceId());
+            throw new UnknownModelPricingException(event.model(), event.traceId());
         }
 
         // inputTokens 已經是非快取的輸入 tokens（快取斷點之後的部分）
@@ -129,7 +129,7 @@ public class CostCalculationService {
      * @param events 用量事件列表
      * @return 批次總成本（美元）
      */
-    public BigDecimal calculateBatchCost(List<UsageEvent> events) {
+    public BigDecimal calculateBatchCost(List<UsageEventData> events) {
         return events.stream()
             .map(this::calculateCost)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -144,7 +144,7 @@ public class CostCalculationService {
      * @param events 用量事件列表
      * @return 因 Cache 節省的成本（美元）
      */
-    public BigDecimal calculateCacheSavings(List<UsageEvent> events) {
+    public BigDecimal calculateCacheSavings(List<UsageEventData> events) {
         return events.stream()
             .map(this::calculateSingleEventCacheSavings)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -155,7 +155,7 @@ public class CostCalculationService {
      *
      * @throws UnknownModelPricingException 若模型非 null 但找不到定價配置
      */
-    private BigDecimal calculateSingleEventCacheSavings(UsageEvent event) {
+    private BigDecimal calculateSingleEventCacheSavings(UsageEventData event) {
         // Error 事件可能沒有 model，這是允許的
         if (event.model() == null || event.cacheReadTokens() <= 0) {
             return BigDecimal.ZERO;
@@ -163,7 +163,7 @@ public class CostCalculationService {
 
         ModelPricing pricing = findPricing(event.model());
         if (pricing == null) {
-            throw new UnknownModelPricingException(event.model(), event.eventId());
+            throw new UnknownModelPricingException(event.model(), event.traceId());
         }
 
         // 如果沒有 cache，需要付的 input 成本
@@ -188,13 +188,13 @@ public class CostCalculationService {
      * @return 成本細分
      * @throws UnknownModelPricingException 若有事件的模型非 null 但找不到定價配置
      */
-    public CostBreakdown calculateCostBreakdown(List<UsageEvent> events) {
+    public CostBreakdown calculateCostBreakdown(List<UsageEventData> events) {
         BigDecimal inputCost = BigDecimal.ZERO;
         BigDecimal outputCost = BigDecimal.ZERO;
         BigDecimal cacheReadCost = BigDecimal.ZERO;
         BigDecimal cacheWriteCost = BigDecimal.ZERO;
 
-        for (UsageEvent event : events) {
+        for (UsageEventData event : events) {
             // Error 事件可能沒有 model，跳過
             if (event.model() == null) {
                 continue;
@@ -202,7 +202,7 @@ public class CostCalculationService {
 
             ModelPricing pricing = findPricing(event.model());
             if (pricing == null) {
-                throw new UnknownModelPricingException(event.model(), event.eventId());
+                throw new UnknownModelPricingException(event.model(), event.traceId());
             }
 
             // inputTokens 已經是非快取的輸入（快取斷點之後的部分）

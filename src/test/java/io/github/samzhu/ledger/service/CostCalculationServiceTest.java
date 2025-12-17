@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.Instant;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +14,6 @@ import io.github.samzhu.ledger.config.LedgerProperties;
 import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 import io.github.samzhu.ledger.config.LedgerProperties.BatchConfig;
 import io.github.samzhu.ledger.config.LedgerProperties.ModelPricing;
-import io.github.samzhu.ledger.dto.UsageEvent;
 import io.github.samzhu.ledger.dto.UsageEventData;
 
 class CostCalculationServiceTest {
@@ -58,7 +57,7 @@ class CostCalculationServiceTest {
     @Test
     void shouldCalculateSonnetCost() {
         // Given: 1000 非快取輸入 tokens, 500 輸出 tokens
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             "claude-sonnet-4-20250514",
             1000, 500, 0, 0
         );
@@ -76,7 +75,7 @@ class CostCalculationServiceTest {
     @Test
     void shouldCalculateOpusCost() {
         // Given: 2000 非快取輸入 tokens, 1000 輸出 tokens
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             "claude-opus-4-20250514",
             2000, 1000, 0, 0
         );
@@ -95,7 +94,7 @@ class CostCalculationServiceTest {
     void shouldCalculateCostWithCacheTokens() {
         // Given: 1000 非快取輸入, 500 快取讀取, 100 快取寫入, 500 輸出
         // 新語意: inputTokens 已經是非快取的輸入（快取斷點之後的部分）
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             "claude-sonnet-4-20250514",
             1000, 500, 100, 500
         );
@@ -115,7 +114,7 @@ class CostCalculationServiceTest {
     @Test
     void shouldThrowExceptionForUnknownModel() {
         // Given: unknown model (non-null but not configured)
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             "unknown-model",
             1000, 500, 0, 0
         );
@@ -124,13 +123,13 @@ class CostCalculationServiceTest {
         assertThatThrownBy(() -> costService.calculateCost(event))
             .isInstanceOf(UnknownModelPricingException.class)
             .hasMessageContaining("unknown-model")
-            .hasMessageContaining("event-1");
+            .hasMessageContaining("trace-1");
     }
 
     @Test
     void shouldReturnZeroForNullModel() {
         // Given: null model (error event)
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             null,
             0, 0, 0, 0
         );
@@ -145,7 +144,7 @@ class CostCalculationServiceTest {
     @Test
     void shouldHandleZeroTokens() {
         // Given: zero tokens
-        UsageEvent event = createEvent(
+        UsageEventData event = createEvent(
             "claude-sonnet-4-20250514",
             0, 0, 0, 0
         );
@@ -158,7 +157,7 @@ class CostCalculationServiceTest {
     }
 
     /**
-     * 建立測試用 UsageEvent。
+     * 建立測試用 UsageEventData。
      *
      * @param model 模型名稱
      * @param inputTokens 非快取輸入 tokens（快取斷點之後的部分）
@@ -166,9 +165,11 @@ class CostCalculationServiceTest {
      * @param cacheCreationTokens 快取寫入 tokens
      * @param cacheReadTokens 快取讀取 tokens
      */
-    private UsageEvent createEvent(String model, int inputTokens, int outputTokens,
+    private UsageEventData createEvent(String model, int inputTokens, int outputTokens,
                                    int cacheCreationTokens, int cacheReadTokens) {
-        UsageEventData data = new UsageEventData(
+        return new UsageEventData(
+            "user-1",        // userId
+            Instant.now(),   // eventTime
             model,           // model
             inputTokens,     // inputTokens (非快取輸入)
             outputTokens,    // outputTokens
@@ -184,6 +185,5 @@ class CostCalculationServiceTest {
             "trace-1",       // traceId
             "req-1"          // anthropicRequestId
         );
-        return new UsageEvent("event-1", "user-1", LocalDate.now(), java.time.Instant.now(), data);
     }
 }

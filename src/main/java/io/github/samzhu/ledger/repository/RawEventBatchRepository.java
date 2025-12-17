@@ -1,6 +1,5 @@
 package io.github.samzhu.ledger.repository;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -16,7 +15,7 @@ import io.github.samzhu.ledger.document.RawEventBatch;
  *
  * <p>此資料主要用於：
  * <ul>
- *   <li>問題追蹤 - 查詢特定時間範圍的原始事件</li>
+ *   <li>批次結算 - 查詢未處理的批次進行聚合統計</li>
  *   <li>資料重算 - 若聚合邏輯變更，可重新處理原始事件</li>
  *   <li>稽核 - 保留完整的事件記錄</li>
  * </ul>
@@ -25,23 +24,6 @@ import io.github.samzhu.ledger.document.RawEventBatch;
  * @see <a href="https://docs.spring.io/spring-data/mongodb/reference/mongodb/repositories/query-methods.html">Query Methods</a>
  */
 public interface RawEventBatchRepository extends MongoRepository<RawEventBatch, String> {
-
-    /**
-     * 查詢特定日期的所有批次。
-     *
-     * @param date 要查詢的日期
-     * @return 該日期的批次列表
-     */
-    List<RawEventBatch> findByDate(LocalDate date);
-
-    /**
-     * 查詢日期區間內的批次，依建立時間排序。
-     *
-     * @param startDate 起始日期（含）
-     * @param endDate 結束日期（含）
-     * @return 符合條件的批次列表，依建立時間升序排列
-     */
-    List<RawEventBatch> findByDateBetweenOrderByCreatedAtAsc(LocalDate startDate, LocalDate endDate);
 
     /**
      * 查詢尚未結算的批次，依建立時間排序。

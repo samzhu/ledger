@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import io.github.samzhu.ledger.document.RawEventBatch;
-import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.exception.UnknownModelPricingException;
 import io.github.samzhu.ledger.repository.RawEventBatchRepository;
 
@@ -102,7 +102,7 @@ public class BatchSettlementService {
 
         for (RawEventBatch batch : pendingBatches) {
             try {
-                List<UsageEvent> events = batch.events();
+                List<UsageEventData> events = batch.events();
                 totalEvents += events.size();
 
                 aggregationService.processBatch(events);

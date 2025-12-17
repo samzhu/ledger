@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 import io.github.samzhu.ledger.config.LedgerProperties;
 import io.github.samzhu.ledger.document.RawEventBatch;
-import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.dto.UsageEventData;
 import io.github.samzhu.ledger.repository.RawEventBatchRepository;
 
 /**
@@ -48,7 +48,7 @@ public class EventBufferService implements SmartLifecycle {
     private static final Logger log = LoggerFactory.getLogger(EventBufferService.class);
 
     private final RawEventBatchRepository rawEventBatchRepository;
-    private final List<UsageEvent> eventBuffer = new CopyOnWriteArrayList<>();
+    private final List<UsageEventData> eventBuffer = new CopyOnWriteArrayList<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final int batchSize;
@@ -67,10 +67,10 @@ public class EventBufferService implements SmartLifecycle {
      *
      * @param event 用量事件
      */
-    public void addEvent(UsageEvent event) {
+    public void addEvent(UsageEventData event) {
         eventBuffer.add(event);
-        log.debug("Event buffered: eventId={}, userId={}, bufferSize={}",
-            event.eventId(), event.userId(), eventBuffer.size());
+        log.debug("Event buffered: userId={}, model={}, bufferSize={}",
+            event.userId(), event.model(), eventBuffer.size());
 
         if (eventBuffer.size() >= batchSize) {
             log.info("Buffer size reached {}, triggering flush", batchSize);
@@ -90,7 +90,7 @@ public class EventBufferService implements SmartLifecycle {
             return;
         }
 
-        List<UsageEvent> batch = new ArrayList<>(eventBuffer);
+        List<UsageEventData> batch = new ArrayList<>(eventBuffer);
         eventBuffer.clear();
 
         log.info("Flushing {} events to database", batch.size());

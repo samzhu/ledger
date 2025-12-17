@@ -35,7 +35,7 @@ import io.github.samzhu.ledger.document.DailyUserUsage.ModelBreakdown;
 import io.github.samzhu.ledger.document.SystemStats;
 import io.github.samzhu.ledger.document.SystemStats.TopItem;
 import io.github.samzhu.ledger.document.UserQuota;
-import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.dto.UsageEventData;
 
 /**
  * 用量事件聚合服務（增強版）。
@@ -94,7 +94,7 @@ public class UsageAggregationService {
      *
      * @param events 要處理的用量事件列表
      */
-    public void processBatch(List<UsageEvent> events) {
+    public void processBatch(List<UsageEventData> events) {
         if (events.isEmpty()) {
             log.debug("Empty batch, skipping aggregation");
             return;
@@ -117,23 +117,23 @@ public class UsageAggregationService {
      *
      * <p>新增：延遲百分位、錯誤分布、Cache 效率、每小時分布、成本細分。
      */
-    private void updateDailyUserUsage(List<UsageEvent> events) {
+    private void updateDailyUserUsage(List<UsageEventData> events) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, DailyUserUsage.class);
 
-        Map<String, List<UsageEvent>> grouped = events.stream()
-            .collect(Collectors.groupingBy(e -> DailyUserUsage.createId(e.date(), e.userId())));
+        Map<String, List<UsageEventData>> grouped = events.stream()
+            .collect(Collectors.groupingBy(e -> DailyUserUsage.createId(toUtcDate(e.eventTime()), e.userId())));
 
         grouped.forEach((docId, userEvents) -> {
-            UsageEvent first = userEvents.get(0);
+            UsageEventData first = userEvents.get(0);
 
             // === 基本統計 ===
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
-            long totalInput = userEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-            long totalOutput = userEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
-            long totalCacheCreation = userEvents.stream().mapToLong(UsageEvent::cacheCreationTokens).sum();
-            long totalCacheRead = userEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
-            long totalTokens = userEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
-            int successCount = (int) userEvents.stream().filter(UsageEvent::isSuccess).count();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
+            long totalInput = userEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long totalOutput = userEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            long totalCacheCreation = userEvents.stream().mapToLong(UsageEventData::cacheCreationTokens).sum();
+            long totalCacheRead = userEvents.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
+            long totalTokens = userEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
+            int successCount = (int) userEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = userEvents.size() - successCount;
 
             BigDecimal totalCost = costService.calculateBatchCost(userEvents);
@@ -164,7 +164,7 @@ public class UsageAggregationService {
 
             Query query = Query.query(Criteria.where("_id").is(docId));
             Update update = new Update()
-                .setOnInsert("date", first.date())
+                .setOnInsert("date", toUtcDate(first.eventTime()))
                 .setOnInsert("userId", first.userId())
                 .inc("totalInputTokens", totalInput)
                 .inc("totalOutputTokens", totalOutput)
@@ -218,26 +218,26 @@ public class UsageAggregationService {
      *
      * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
-    private void updateDailyModelUsage(List<UsageEvent> events) {
+    private void updateDailyModelUsage(List<UsageEventData> events) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, DailyModelUsage.class);
 
-        Map<String, List<UsageEvent>> grouped = events.stream()
+        Map<String, List<UsageEventData>> grouped = events.stream()
             .filter(e -> e.model() != null)
-            .collect(Collectors.groupingBy(e -> DailyModelUsage.createId(e.date(), e.model())));
+            .collect(Collectors.groupingBy(e -> DailyModelUsage.createId(toUtcDate(e.eventTime()), e.model())));
 
         grouped.forEach((docId, modelEvents) -> {
-            UsageEvent first = modelEvents.get(0);
+            UsageEventData first = modelEvents.get(0);
 
             // === 基本統計 ===
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
-            long totalInput = modelEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-            long totalOutput = modelEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
-            long totalCacheCreation = modelEvents.stream().mapToLong(UsageEvent::cacheCreationTokens).sum();
-            long totalCacheRead = modelEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
-            long totalTokens = modelEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
-            int successCount = (int) modelEvents.stream().filter(UsageEvent::isSuccess).count();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
+            long totalInput = modelEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long totalOutput = modelEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            long totalCacheCreation = modelEvents.stream().mapToLong(UsageEventData::cacheCreationTokens).sum();
+            long totalCacheRead = modelEvents.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
+            long totalTokens = modelEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
+            int successCount = (int) modelEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = modelEvents.size() - successCount;
-            int uniqueUsers = (int) modelEvents.stream().map(UsageEvent::userId).distinct().count();
+            int uniqueUsers = (int) modelEvents.stream().map(UsageEventData::userId).distinct().count();
 
             BigDecimal totalCost = costService.calculateBatchCost(modelEvents);
 
@@ -260,7 +260,7 @@ public class UsageAggregationService {
 
             Query query = Query.query(Criteria.where("_id").is(docId));
             Update update = new Update()
-                .setOnInsert("date", first.date())
+                .setOnInsert("date", toUtcDate(first.eventTime()))
                 .setOnInsert("model", first.model())
                 .inc("totalInputTokens", totalInput)
                 .inc("totalOutputTokens", totalOutput)
@@ -297,17 +297,17 @@ public class UsageAggregationService {
     /**
      * 更新用戶配額與累計統計（取代 UserSummary）。
      */
-    private void updateUserQuota(List<UsageEvent> events) {
+    private void updateUserQuota(List<UsageEventData> events) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, UserQuota.class);
 
-        Map<String, List<UsageEvent>> grouped = events.stream()
-            .collect(Collectors.groupingBy(UsageEvent::userId));
+        Map<String, List<UsageEventData>> grouped = events.stream()
+            .collect(Collectors.groupingBy(UsageEventData::userId));
 
         grouped.forEach((userId, userEvents) -> {
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
-            long totalInput = userEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-            long totalOutput = userEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
-            long totalTokens = userEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
+            long totalInput = userEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long totalOutput = userEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            long totalTokens = userEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
 
             BigDecimal totalCost = costService.calculateBatchCost(userEvents);
 
@@ -344,20 +344,20 @@ public class UsageAggregationService {
     /**
      * 更新系統日統計（增強版）。
      */
-    private void updateSystemStats(List<UsageEvent> events) {
+    private void updateSystemStats(List<UsageEventData> events) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, SystemStats.class);
 
-        Map<LocalDate, List<UsageEvent>> grouped = events.stream()
-            .collect(Collectors.groupingBy(UsageEvent::date));
+        Map<LocalDate, List<UsageEventData>> grouped = events.stream()
+            .collect(Collectors.groupingBy(e -> toUtcDate(e.eventTime())));
 
         grouped.forEach((date, dateEvents) -> {
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
-            long totalInput = dateEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-            long totalOutput = dateEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
-            long totalTokens = dateEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
-            int successCount = (int) dateEvents.stream().filter(UsageEvent::isSuccess).count();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
+            long totalInput = dateEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long totalOutput = dateEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            long totalTokens = dateEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
+            int successCount = (int) dateEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = dateEvents.size() - successCount;
-            int uniqueUsers = (int) dateEvents.stream().map(UsageEvent::userId).distinct().count();
+            int uniqueUsers = (int) dateEvents.stream().map(UsageEventData::userId).distinct().count();
 
             BigDecimal totalCost = costService.calculateBatchCost(dateEvents);
 
@@ -369,13 +369,13 @@ public class UsageAggregationService {
             TDigest digest = loadOrCreateDigest(date.toString(), SystemStats.class);
             dateEvents.forEach(e -> digest.add(e.latencyMs()));
             double avgLatency = dateEvents.isEmpty() ? 0.0 :
-                dateEvents.stream().mapToLong(UsageEvent::latencyMs).average().orElse(0.0);
+                dateEvents.stream().mapToLong(UsageEventData::latencyMs).average().orElse(0.0);
             double p50 = digest.size() > 0 ? digest.quantile(0.5) : 0.0;
             double p90 = digest.size() > 0 ? digest.quantile(0.9) : 0.0;
             double p99 = digest.size() > 0 ? digest.quantile(0.99) : 0.0;
 
             // Cache 效率
-            long totalCacheRead = dateEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
+            long totalCacheRead = dateEvents.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
             double cacheHitRate = totalInput > 0 ? (double) totalCacheRead / totalInput : 0.0;
             BigDecimal cacheSaved = costService.calculateCacheSavings(dateEvents);
 
@@ -428,7 +428,7 @@ public class UsageAggregationService {
     /**
      * 聚合錯誤類型分布。
      */
-    private Map<String, Integer> aggregateErrorBreakdown(List<UsageEvent> events) {
+    private Map<String, Integer> aggregateErrorBreakdown(List<UsageEventData> events) {
         return events.stream()
             .filter(e -> !e.isSuccess())
             .collect(Collectors.groupingBy(
@@ -457,16 +457,16 @@ public class UsageAggregationService {
     /**
      * 聚合每小時用量細分（用於 DailyUserUsage）。
      */
-    private Map<Integer, HourlyBreakdown> aggregateHourlyBreakdown(List<UsageEvent> events) {
+    private Map<Integer, HourlyBreakdown> aggregateHourlyBreakdown(List<UsageEventData> events) {
         Map<Integer, HourlyBreakdown> result = new HashMap<>();
 
-        Map<Integer, List<UsageEvent>> byHour = events.stream()
+        Map<Integer, List<UsageEventData>> byHour = events.stream()
             .collect(Collectors.groupingBy(
-                e -> Integer.valueOf(e.timestamp().atZone(ZoneOffset.UTC).getHour())));
+                e -> Integer.valueOf(e.eventTime().atZone(ZoneOffset.UTC).getHour())));
 
         byHour.forEach((hour, hourEvents) -> {
             int requestCount = hourEvents.size();
-            long totalTokens = hourEvents.stream().mapToLong(UsageEvent::totalTokens).sum();
+            long totalTokens = hourEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
             BigDecimal costUsd = costService.calculateBatchCost(hourEvents);
             result.put(hour, new HourlyBreakdown(requestCount, totalTokens, costUsd));
         });
@@ -477,10 +477,10 @@ public class UsageAggregationService {
     /**
      * 聚合每小時請求數（用於 DailyModelUsage 和 SystemStats）。
      */
-    private Map<Integer, Integer> aggregateHourlyRequestCount(List<UsageEvent> events) {
+    private Map<Integer, Integer> aggregateHourlyRequestCount(List<UsageEventData> events) {
         return events.stream()
             .collect(Collectors.groupingBy(
-                e -> Integer.valueOf(e.timestamp().atZone(ZoneOffset.UTC).getHour()),
+                e -> Integer.valueOf(e.eventTime().atZone(ZoneOffset.UTC).getHour()),
                 Collectors.summingInt(e -> 1)));
     }
 
@@ -489,20 +489,20 @@ public class UsageAggregationService {
      *
      * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
-    private Map<String, ModelBreakdown> aggregateModelBreakdown(List<UsageEvent> events) {
+    private Map<String, ModelBreakdown> aggregateModelBreakdown(List<UsageEventData> events) {
         Map<String, ModelBreakdown> result = new HashMap<>();
 
-        Map<String, List<UsageEvent>> byModel = events.stream()
+        Map<String, List<UsageEventData>> byModel = events.stream()
             .filter(e -> e.model() != null)
-            .collect(Collectors.groupingBy(UsageEvent::model));
+            .collect(Collectors.groupingBy(UsageEventData::model));
 
         byModel.forEach((model, modelEvents) -> {
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEvent 計算)
-            long inputTokens = modelEvents.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-            long outputTokens = modelEvents.stream().mapToLong(UsageEvent::outputTokens).sum();
-            long cacheReadTokens = modelEvents.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
+            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
+            long inputTokens = modelEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long outputTokens = modelEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            long cacheReadTokens = modelEvents.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
             int requestCount = modelEvents.size();
-            int successCount = (int) modelEvents.stream().filter(UsageEvent::isSuccess).count();
+            int successCount = (int) modelEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = requestCount - successCount;
             BigDecimal costUsd = costService.calculateBatchCost(modelEvents);
 
@@ -519,10 +519,10 @@ public class UsageAggregationService {
      *
      * <p>hitRate = cacheReadTokens / totalInputTokens
      */
-    private DailyUserUsage.CacheEfficiency calculateCacheEfficiency(List<UsageEvent> events) {
+    private DailyUserUsage.CacheEfficiency calculateCacheEfficiency(List<UsageEventData> events) {
         // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens
-        long totalInput = events.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-        long cacheRead = events.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
+        long totalInput = events.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+        long cacheRead = events.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
 
         if (totalInput == 0) {
             return DailyUserUsage.CacheEfficiency.empty();
@@ -539,10 +539,10 @@ public class UsageAggregationService {
      *
      * <p>hitRate = cacheReadTokens / totalInputTokens
      */
-    private DailyModelUsage.CacheEfficiency calculateModelCacheEfficiency(List<UsageEvent> events) {
+    private DailyModelUsage.CacheEfficiency calculateModelCacheEfficiency(List<UsageEventData> events) {
         // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens
-        long totalInput = events.stream().mapToLong(UsageEvent::totalInputTokens).sum();
-        long cacheRead = events.stream().mapToLong(UsageEvent::cacheReadTokens).sum();
+        long totalInput = events.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+        long cacheRead = events.stream().mapToLong(UsageEventData::cacheReadTokens).sum();
 
         if (totalInput == 0) {
             return DailyModelUsage.CacheEfficiency.empty();
@@ -579,16 +579,16 @@ public class UsageAggregationService {
      *
      * <p>注意：過濾掉 model 為 null 的事件（通常是錯誤事件）。
      */
-    private List<TopItem> calculateTopModels(List<UsageEvent> events, int limit) {
-        Map<String, List<UsageEvent>> byModel = events.stream()
+    private List<TopItem> calculateTopModels(List<UsageEventData> events, int limit) {
+        Map<String, List<UsageEventData>> byModel = events.stream()
             .filter(e -> e.model() != null)
-            .collect(Collectors.groupingBy(UsageEvent::model));
+            .collect(Collectors.groupingBy(UsageEventData::model));
 
         return byModel.entrySet().stream()
             .map(e -> new TopItem(
                 e.getKey(),
                 e.getValue().size(),
-                e.getValue().stream().mapToLong(UsageEvent::totalTokens).sum(),
+                e.getValue().stream().mapToLong(UsageEventData::totalTokens).sum(),
                 costService.calculateBatchCost(e.getValue())))
             .sorted(Comparator.comparingInt(TopItem::requestCount).reversed())
             .limit(limit)
@@ -598,15 +598,15 @@ public class UsageAggregationService {
     /**
      * 計算活躍用戶排行榜。
      */
-    private List<TopItem> calculateTopUsers(List<UsageEvent> events, int limit) {
-        Map<String, List<UsageEvent>> byUser = events.stream()
-            .collect(Collectors.groupingBy(UsageEvent::userId));
+    private List<TopItem> calculateTopUsers(List<UsageEventData> events, int limit) {
+        Map<String, List<UsageEventData>> byUser = events.stream()
+            .collect(Collectors.groupingBy(UsageEventData::userId));
 
         return byUser.entrySet().stream()
             .map(e -> new TopItem(
                 e.getKey(),
                 e.getValue().size(),
-                e.getValue().stream().mapToLong(UsageEvent::totalTokens).sum(),
+                e.getValue().stream().mapToLong(UsageEventData::totalTokens).sum(),
                 costService.calculateBatchCost(e.getValue())))
             .sorted(Comparator.comparingLong(TopItem::totalTokens).reversed())
             .limit(limit)
@@ -696,5 +696,17 @@ public class UsageAggregationService {
     private String sanitizeFieldName(String name) {
         // MongoDB field names 不能包含 '.' 和 '$'
         return name.replace(".", "_").replace("$", "_");
+    }
+
+    /**
+     * 將 Instant 轉換為 UTC 日期。
+     *
+     * <p>統一使用 UTC 時區進行日期分組，避免因用戶時區不同而導致統計不一致。
+     *
+     * @param timestamp 時間戳
+     * @return UTC 日期
+     */
+    private LocalDate toUtcDate(Instant timestamp) {
+        return timestamp.atZone(ZoneOffset.UTC).toLocalDate();
     }
 }

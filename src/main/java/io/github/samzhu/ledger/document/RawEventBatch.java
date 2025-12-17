@@ -1,14 +1,12 @@
 package io.github.samzhu.ledger.document;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import io.github.samzhu.ledger.dto.UsageEvent;
+import io.github.samzhu.ledger.dto.UsageEventData;
 
 /**
  * 批次原始事件文件。
@@ -20,8 +18,7 @@ import io.github.samzhu.ledger.dto.UsageEvent;
  *   <li>保留原始資料 - 可用於重算統計或問題追蹤</li>
  * </ul>
  *
- * <p>文件 ID 格式：{@code {date}_{timestamp}_{uuid}}，
- * 例如 {@code 2025-12-10_1733817600000_abc12345}
+ * <p>文件 ID 由 MongoDB/Firestore 自動產生（ObjectId）。
  *
  * <p>{@code processed} 欄位標記此批次是否已完成分析結算。
  * 新建的批次預設為 {@code false}，完成聚合統計後更新為 {@code true}。
@@ -38,8 +35,7 @@ import io.github.samzhu.ledger.dto.UsageEvent;
 @Document(collection = "raw_event_batches")
 public record RawEventBatch(
     @Id String id,
-    LocalDate date,
-    List<UsageEvent> events,
+    List<UsageEventData> events,
     int eventCount,
     Instant createdAt,
     boolean processed
@@ -47,34 +43,17 @@ public record RawEventBatch(
     /**
      * 從事件列表建立新的批次文件。
      *
-     * <p>自動產生唯一 ID 並記錄建立時間。
+     * <p>ID 設為 null，由 MongoDB/Firestore 自動產生 ObjectId。
      *
      * @param events 要批次儲存的用量事件列表
      * @return 新建立的 RawEventBatch 實例
      * @throws IllegalArgumentException 如果事件列表為空
      */
-    public static RawEventBatch create(List<UsageEvent> events) {
+    public static RawEventBatch create(List<UsageEventData> events) {
         if (events.isEmpty()) {
             throw new IllegalArgumentException("Events list cannot be empty");
         }
 
-        LocalDate date = events.get(0).date();
-        Instant now = Instant.now();
-        String id = createId(date, now);
-
-        return new RawEventBatch(id, date, events, events.size(), now, false);
-    }
-
-    /**
-     * 產生唯一的批次 ID。
-     *
-     * <p>組合日期、時間戳和 UUID 確保唯一性，即使在高併發情況下也不會衝突。
-     *
-     * @param date 批次日期
-     * @param timestamp 建立時間
-     * @return 唯一 ID，格式為 {@code YYYY-MM-DD_epochMillis_uuid8}
-     */
-    public static String createId(LocalDate date, Instant timestamp) {
-        return date.toString() + "_" + timestamp.toEpochMilli() + "_" + UUID.randomUUID().toString().substring(0, 8);
+        return new RawEventBatch(null, events, events.size(), Instant.now(), false);
     }
 }
