@@ -29,13 +29,13 @@
     </div>
 
     <!-- Quota Status Card (if quota enabled) -->
-    <div th:if="${quota != null && quota.quotaConfig() != null && quota.quotaConfig().enabled()}"
+    <div th:if="${quota != null && quota.quotaEnabled()}"
          class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div class="flex justify-between items-start mb-4">
             <div>
                 <h2 class="text-lg font-semibold text-gray-800">Quota Status</h2>
                 <p class="text-sm text-gray-500"
-                   th:text="'Period: ' + ${quota.periodStartDate()} + ' ~ ' + ${quota.periodEndDate()}">Period: 2025-12-01 ~ 2025-12-31</p>
+                   th:text="'Period: ' + ${quota.periodYear()} + '-' + ${#strings.padLeft(quota.periodMonth(), 2, '0')}">Period: 2025-12</p>
             </div>
             <span th:if="${quota.quotaExceeded()}"
                   class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
@@ -53,27 +53,8 @@
             </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Token Usage -->
-            <div class="text-center">
-                <div class="relative inline-flex items-center justify-center">
-                    <svg class="w-24 h-24 transform -rotate-90">
-                        <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                        <circle cx="48" cy="48" r="40"
-                                th:attr="stroke=${quota.tokenUsagePercent() >= 90 ? '#ef4444' : (quota.tokenUsagePercent() >= 70 ? '#f59e0b' : '#10b981')}"
-                                stroke-width="8" fill="none"
-                                stroke-linecap="round"
-                                th:style="'stroke-dasharray: 251; stroke-dashoffset: ' + ${251 - (251 * T(Math).min(100, quota.tokenUsagePercent()) / 100)}"/>
-                    </svg>
-                    <span class="absolute text-xl font-bold"
-                          th:text="${#numbers.formatDecimal(quota.tokenUsagePercent(), 1, 0) + '%'}">0%</span>
-                </div>
-                <p class="mt-2 text-sm font-medium text-gray-700">Token Usage</p>
-                <p class="text-xs text-gray-500"
-                   th:text="${#numbers.formatInteger(quota.periodTokenUsed(), 0, 'COMMA')} + ' / ' + ${#numbers.formatInteger(quota.quotaConfig().tokenLimit(), 0, 'COMMA')}">0 / 0</p>
-            </div>
-
-            <!-- Cost Usage -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Cost Usage (Primary) -->
             <div class="text-center">
                 <div class="relative inline-flex items-center justify-center">
                     <svg class="w-24 h-24 transform -rotate-90">
@@ -89,14 +70,70 @@
                 </div>
                 <p class="mt-2 text-sm font-medium text-gray-700">Cost Usage</p>
                 <p class="text-xs text-gray-500"
-                   th:text="'$' + ${#numbers.formatDecimal(quota.periodCostUsed(), 1, 2)} + ' / $' + ${#numbers.formatDecimal(quota.quotaConfig().costLimitUsd(), 1, 2)}">$0 / $0</p>
+                   th:text="'$' + ${#numbers.formatDecimal(quota.periodCostUsd() != null ? quota.periodCostUsd() : 0, 1, 2)} + ' / $' + ${#numbers.formatDecimal(quota.getEffectiveCostLimit(), 1, 2)}">$0 / $10</p>
             </div>
 
-            <!-- Period Info -->
+            <!-- Period Token Usage -->
+            <div class="text-center">
+                <div class="relative inline-flex items-center justify-center">
+                    <svg class="w-24 h-24 transform -rotate-90">
+                        <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="48" cy="48" r="40" stroke="#8b5cf6"
+                                stroke-width="8" fill="none"
+                                stroke-linecap="round"
+                                style="stroke-dasharray: 251; stroke-dashoffset: 125"/>
+                    </svg>
+                    <span class="absolute text-lg font-bold text-purple-600"
+                          th:text="${#numbers.formatInteger(quota.periodTokens() != null ? quota.periodTokens() : 0, 0, 'COMMA')}">0</span>
+                </div>
+                <p class="mt-2 text-sm font-medium text-gray-700">Period Tokens</p>
+                <p class="text-xs text-gray-500"
+                   th:text="${#numbers.formatInteger(quota.periodRequestCount() != null ? quota.periodRequestCount() : 0, 0, 'COMMA')} + ' requests'">0 requests</p>
+            </div>
+
+            <!-- Bonus Info -->
             <div class="text-center flex flex-col justify-center">
-                <p class="text-3xl font-bold text-blue-600" th:text="${quota.getRemainingDays()}">0</p>
-                <p class="text-sm text-gray-500">Days Remaining</p>
-                <p class="mt-2 text-xs text-gray-400" th:text="'Resets: ' + ${quota.quotaConfig().period()}">Resets: MONTHLY</p>
+                <p class="text-2xl font-bold text-emerald-600"
+                   th:text="'$' + ${#numbers.formatDecimal(quota.bonusCostUsd() != null ? quota.bonusCostUsd() : 0, 1, 2)}">$0.00</p>
+                <p class="text-sm text-gray-500">Bonus Credit</p>
+                <p th:if="${quota.bonusReason() != null}" class="mt-1 text-xs text-gray-400 truncate max-w-[150px] mx-auto"
+                   th:text="${quota.bonusReason()}" th:title="${quota.bonusReason()}">-</p>
+                <p th:if="${quota.bonusReason() == null}" class="mt-1 text-xs text-gray-400">No bonus granted</p>
+            </div>
+
+            <!-- Quota Limits -->
+            <div class="text-center flex flex-col justify-center bg-gray-50 rounded-lg p-3">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-500">Base Limit</span>
+                        <span class="font-medium" th:text="'$' + ${#numbers.formatDecimal(quota.costLimitUsd() != null ? quota.costLimitUsd() : 0, 1, 2)}">$10.00</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-500">+ Bonus</span>
+                        <span class="font-medium text-emerald-600" th:text="'$' + ${#numbers.formatDecimal(quota.bonusCostUsd() != null ? quota.bonusCostUsd() : 0, 1, 2)}">$0.00</span>
+                    </div>
+                    <div class="border-t border-gray-200 pt-2 flex justify-between text-xs">
+                        <span class="text-gray-700 font-medium">Effective</span>
+                        <span class="font-bold text-blue-600" th:text="'$' + ${#numbers.formatDecimal(quota.getEffectiveCostLimit(), 1, 2)}">$10.00</span>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">Resets monthly</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quota Disabled Notice -->
+    <div th:if="${quota != null && !quota.quotaEnabled()}"
+         class="bg-gray-50 rounded-xl border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-medium text-gray-700">Quota Not Enabled</h3>
+                <p class="text-xs text-gray-500">This user does not have quota restrictions enabled.</p>
             </div>
         </div>
     </div>
@@ -276,6 +313,264 @@
             </div>
         </div>
     </div>
+
+    <!-- Quota Management Section -->
+    <div th:if="${quota != null}" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Quota Management</h3>
+            <div class="flex gap-2">
+                <button onclick="openQuotaConfigModal()"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Configure Quota
+                </button>
+                <button onclick="openBonusModal()"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Grant Bonus
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Actions Status -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Current Quota Config -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Quota Status</span>
+                </div>
+                <p th:if="${quota.quotaEnabled()}" class="text-lg font-bold text-green-600">Enabled</p>
+                <p th:if="${!quota.quotaEnabled()}" class="text-lg font-bold text-gray-400">Disabled</p>
+                <p class="text-xs text-gray-500 mt-1" th:text="'Limit: $' + ${#numbers.formatDecimal(quota.costLimitUsd() != null ? quota.costLimitUsd() : 0, 1, 2)} + '/month'">Limit: $10.00/month</p>
+            </div>
+
+            <!-- Current Bonus -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Current Bonus</span>
+                </div>
+                <p class="text-lg font-bold text-emerald-600" th:text="'$' + ${#numbers.formatDecimal(quota.bonusCostUsd() != null ? quota.bonusCostUsd() : 0, 1, 2)}">$0.00</p>
+                <p th:if="${quota.bonusGrantedAt() != null}" class="text-xs text-gray-500 mt-1">
+                    Granted: <span th:data-utc="${quota.bonusGrantedAt()}" data-format="YYYY-MM-DD">-</span>
+                </p>
+                <p th:if="${quota.bonusGrantedAt() == null}" class="text-xs text-gray-500 mt-1">No bonus granted</p>
+            </div>
+
+            <!-- Remaining Budget -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Remaining</span>
+                </div>
+                <p th:if="${quota.quotaEnabled()}" class="text-lg font-bold"
+                   th:classappend="${quota.getRemainingCost() != null && quota.getRemainingCost().compareTo(T(java.math.BigDecimal).ZERO) <= 0} ? 'text-red-600' : 'text-blue-600'"
+                   th:text="'$' + ${#numbers.formatDecimal(quota.getRemainingCost() != null ? quota.getRemainingCost() : 0, 1, 2)}">$0.00</p>
+                <p th:if="${!quota.quotaEnabled()}" class="text-lg font-bold text-gray-400">Unlimited</p>
+                <p class="text-xs text-gray-500 mt-1" th:text="'Effective: $' + ${#numbers.formatDecimal(quota.getEffectiveCostLimit(), 1, 2)}">Effective: $10.00</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quota Config Modal -->
+    <div id="quotaConfigModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Configure Quota</h3>
+                <button onclick="closeQuotaConfigModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <!-- Enable Toggle -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium text-gray-700">Enable Quota</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="quotaEnabled" class="sr-only peer"
+                                   th:checked="${quota != null && quota.quotaEnabled()}">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Cost Limit -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Cost Limit (USD)</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                            <input type="number" id="costLimitUsd" step="0.01" min="0"
+                                   th:value="${quota != null && quota.costLimitUsd() != null} ? ${quota.costLimitUsd()} : '10.00'"
+                                   class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="closeQuotaConfigModal()"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                        Cancel
+                    </button>
+                    <button onclick="saveQuotaConfig()"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bonus Modal -->
+    <div id="bonusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Grant Bonus Credit</h3>
+                <button onclick="closeBonusModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <!-- Amount -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bonus Amount (USD)</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                            <input type="number" id="bonusAmount" step="0.01" min="0.01" value="5.00"
+                                   class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <!-- Reason -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                        <input type="text" id="bonusReason" placeholder="e.g., Compensation for service issue"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    </div>
+
+                    <!-- Current Bonus Info -->
+                    <div class="bg-gray-50 rounded-lg p-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Current Bonus:</span>
+                            <span class="font-medium" th:text="'$' + ${#numbers.formatDecimal(quota != null && quota.bonusCostUsd() != null ? quota.bonusCostUsd() : 0, 1, 2)}">$0.00</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">New bonus will replace existing bonus</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="closeBonusModal()"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                        Cancel
+                    </button>
+                    <button onclick="grantBonus()"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">
+                        Grant Bonus
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quota Management JavaScript -->
+    <script th:inline="javascript">
+        const userId = /*[[${userId}]]*/ '';
+
+        function openQuotaConfigModal() {
+            document.getElementById('quotaConfigModal').classList.remove('hidden');
+        }
+
+        function closeQuotaConfigModal() {
+            document.getElementById('quotaConfigModal').classList.add('hidden');
+        }
+
+        function openBonusModal() {
+            document.getElementById('bonusModal').classList.remove('hidden');
+        }
+
+        function closeBonusModal() {
+            document.getElementById('bonusModal').classList.add('hidden');
+        }
+
+        async function saveQuotaConfig() {
+            const enabled = document.getElementById('quotaEnabled').checked;
+            const costLimitUsd = parseFloat(document.getElementById('costLimitUsd').value) || 0;
+
+            try {
+                const response = await fetch(`/api/v1/quota/users/${encodeURIComponent(userId)}/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled, costLimitUsd })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update quota config');
+                }
+
+                closeQuotaConfigModal();
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update quota configuration. Please try again.');
+            }
+        }
+
+        async function grantBonus() {
+            const amount = parseFloat(document.getElementById('bonusAmount').value);
+            const reason = document.getElementById('bonusReason').value.trim();
+
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid bonus amount.');
+                return;
+            }
+
+            if (!reason) {
+                alert('Please enter a reason for the bonus.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/quota/users/${encodeURIComponent(userId)}/bonus`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, reason })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to grant bonus');
+                }
+
+                closeBonusModal();
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to grant bonus. Please try again.');
+            }
+        }
+
+        // Close modals on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeQuotaConfigModal();
+                closeBonusModal();
+            }
+        });
+    </script>
 
     <!-- Daily Details Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100">

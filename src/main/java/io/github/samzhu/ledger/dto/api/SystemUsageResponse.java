@@ -33,5 +33,5 @@ public record SystemUsageResponse(
      * @param requestCount 請求次數
      * @param totalTokens 總 token 數
      */
-    public record TopItem(String id, String name, int requestCount, long totalTokens) {}
+    public record TopItem(String id, String name, long requestCount, long totalTokens) {}
 }

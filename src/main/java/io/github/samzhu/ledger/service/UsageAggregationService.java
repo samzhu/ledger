@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,10 +33,14 @@ import io.github.samzhu.ledger.document.DailyUserUsage;
 import io.github.samzhu.ledger.document.DailyUserUsage.CostBreakdown;
 import io.github.samzhu.ledger.document.DailyUserUsage.HourlyBreakdown;
 import io.github.samzhu.ledger.document.DailyUserUsage.ModelBreakdown;
+import io.github.samzhu.ledger.document.QuotaHistory;
 import io.github.samzhu.ledger.document.SystemStats;
 import io.github.samzhu.ledger.document.SystemStats.TopItem;
 import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.dto.UsageEventData;
+import io.github.samzhu.ledger.repository.QuotaHistoryRepository;
+import io.github.samzhu.ledger.repository.UserQuotaRepository;
+import io.github.samzhu.ledger.util.PeriodUtils;
 
 /**
  * 用量事件聚合服務（增強版）。
@@ -68,17 +73,23 @@ public class UsageAggregationService {
     private final CostCalculationService costService;
     private final LatencyDigestService digestService;
     private final LedgerProperties properties;
+    private final UserQuotaRepository userQuotaRepository;
+    private final QuotaHistoryRepository quotaHistoryRepository;
 
     public UsageAggregationService(
             MongoTemplate mongoTemplate,
             CostCalculationService costService,
             LatencyDigestService digestService,
-            LedgerProperties properties) {
+            LedgerProperties properties,
+            UserQuotaRepository userQuotaRepository,
+            QuotaHistoryRepository quotaHistoryRepository) {
         this.mongoTemplate = mongoTemplate;
         this.costService = costService;
         this.digestService = digestService;
         this.properties = properties;
-        log.info("UsageAggregationService initialized with enhanced analytics");
+        this.userQuotaRepository = userQuotaRepository;
+        this.quotaHistoryRepository = quotaHistoryRepository;
+        log.info("UsageAggregationService initialized with enhanced analytics and quota management");
     }
 
     /**
@@ -295,50 +306,229 @@ public class UsageAggregationService {
     }
 
     /**
-     * 更新用戶配額與累計統計（取代 UserSummary）。
+     * 更新用戶配額與累計統計（含週期重置邏輯）。
+     *
+     * <p>處理流程：
+     * <ol>
+     *   <li>用戶不存在 → 建立新 UserQuota</li>
+     *   <li>週期不一致 → 歸檔至 quota_history → 重置週期欄位</li>
+     *   <li>週期一致 → 直接累加用量</li>
+     * </ol>
      */
     private void updateUserQuota(List<UsageEventData> events) {
-        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, UserQuota.class);
+        int currentYear = PeriodUtils.getCurrentYear();
+        int currentMonth = PeriodUtils.getCurrentMonth();
 
         Map<String, List<UsageEventData>> grouped = events.stream()
             .collect(Collectors.groupingBy(UsageEventData::userId));
 
         grouped.forEach((userId, userEvents) -> {
-            // totalInputTokens = inputTokens + cacheCreationTokens + cacheReadTokens (由 UsageEventData 計算)
-            long totalInput = userEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
-            long totalOutput = userEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
+            // 計算本批次用量
+            long inputTokens = userEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
+            long outputTokens = userEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
             long totalTokens = userEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
+            BigDecimal cost = costService.calculateBatchCost(userEvents);
+            int requestCount = userEvents.size();
 
-            BigDecimal totalCost = costService.calculateBatchCost(userEvents);
+            // 查詢現有 UserQuota
+            Optional<UserQuota> existing = userQuotaRepository.findByUserId(userId);
 
-            Query query = Query.query(Criteria.where("_id").is(userId));
-            // 注意：Firestore MongoDB 相容層不支援同一欄位同時使用 setOnInsert 和 inc
-            // $inc 會在欄位不存在時自動建立，所以不需要 setOnInsert
-            Update update = new Update()
-                .setOnInsert("userId", userId)
-                .setOnInsert("firstSeenAt", Instant.now())
-                .setOnInsert("quotaConfig", UserQuota.QuotaConfig.defaults())
-                .setOnInsert("periodStartDate", LocalDate.now())
-                .setOnInsert("periodEndDate", LocalDate.now().plusMonths(1))
-                .setOnInsert("tokenUsagePercent", 0.0)
-                .setOnInsert("costUsagePercent", 0.0)
-                .setOnInsert("quotaExceeded", false)
-                .inc("totalInputTokens", totalInput)
-                .inc("totalOutputTokens", totalOutput)
-                .inc("totalTokens", totalTokens)
-                .inc("totalRequestCount", userEvents.size())
-                .inc("totalEstimatedCostUsd", totalCost.doubleValue())
-                .inc("periodTokenUsed", totalTokens)
-                .inc("periodCostUsed", totalCost.doubleValue())
-                .inc("periodRequestCount", userEvents.size())
-                .set("lastActiveAt", Instant.now())
-                .set("lastUpdatedAt", Instant.now());
+            if (existing.isEmpty()) {
+                // ========== 用戶不存在：建立新 UserQuota ==========
+                createNewUserQuota(userId, currentYear, currentMonth,
+                    inputTokens, outputTokens, totalTokens, cost, requestCount);
+            } else {
+                UserQuota quota = existing.get();
 
-            bulkOps.upsert(query, update);
+                if (!PeriodUtils.isSamePeriod(quota.periodYear(), quota.periodMonth(), currentYear, currentMonth)) {
+                    // ========== 週期不一致：歸檔 + 重置 + 更新 ==========
+                    archiveAndResetPeriod(quota, currentYear, currentMonth,
+                        inputTokens, outputTokens, totalTokens, cost, requestCount);
+                } else {
+                    // ========== 週期一致：直接累加 ==========
+                    incrementUsage(quota, inputTokens, outputTokens, totalTokens, cost, requestCount);
+                }
+            }
         });
 
-        bulkOps.execute();
-        log.debug("Updated user_quota: {} documents", grouped.size());
+        log.debug("Updated user_quota: {} users", grouped.size());
+    }
+
+    /**
+     * 建立新用戶的 UserQuota。
+     */
+    private void createNewUserQuota(String userId, int year, int month,
+            long inputTokens, long outputTokens, long totalTokens,
+            BigDecimal cost, int requestCount) {
+
+        Instant now = Instant.now();
+        UserQuota newQuota = UserQuota.builder()
+            .userId(userId)
+            .periodYear(year)
+            .periodMonth(month)
+            .periodStartAt(PeriodUtils.getPeriodStart(year, month))
+            .periodEndAt(PeriodUtils.getPeriodEnd(year, month))
+            // 累計統計 = 本批次值
+            .totalInputTokens(inputTokens)
+            .totalOutputTokens(outputTokens)
+            .totalTokens(totalTokens)
+            .totalRequestCount(requestCount)
+            .totalEstimatedCostUsd(cost)
+            // 配額設定（預設）
+            .quotaEnabled(false)
+            .costLimitUsd(BigDecimal.ZERO)
+            // 當期用量 = 本批次值
+            .periodInputTokens(inputTokens)
+            .periodOutputTokens(outputTokens)
+            .periodTokens(totalTokens)
+            .periodCostUsd(cost)
+            .periodRequestCount(requestCount)
+            // 額外額度
+            .bonusCostUsd(BigDecimal.ZERO)
+            // 配額狀態
+            .costUsagePercent(0.0)
+            .quotaExceeded(false)
+            // 時間戳
+            .firstSeenAt(now)
+            .lastActiveAt(now)
+            .lastUpdatedAt(now)
+            .build();
+
+        userQuotaRepository.save(newQuota);
+        log.info("Created new UserQuota: userId={}, period={}-{}", userId, year, month);
+    }
+
+    /**
+     * 歸檔舊週期資料並重置為新週期。
+     */
+    private void archiveAndResetPeriod(UserQuota quota, int newYear, int newMonth,
+            long inputTokens, long outputTokens, long totalTokens,
+            BigDecimal cost, int requestCount) {
+
+        int oldYear = quota.periodYear();
+        int oldMonth = quota.periodMonth();
+
+        // 1. 歸檔至 quota_history（如有用量且尚未歸檔）
+        if (quota.periodRequestCount() > 0 &&
+            !quotaHistoryRepository.existsByUserIdAndPeriodYearAndPeriodMonth(
+                quota.userId(), oldYear, oldMonth)) {
+
+            // 取得模型使用分布（從 daily_user_usage 聚合）
+            Map<String, Long> modelTokens = aggregateModelTokensForUser(quota.userId(), oldYear, oldMonth);
+            Map<String, BigDecimal> modelCosts = aggregateModelCostsForUser(quota.userId(), oldYear, oldMonth);
+
+            QuotaHistory history = QuotaHistory.fromUserQuota(quota, modelTokens, modelCosts);
+            quotaHistoryRepository.save(history);
+            log.info("Archived quota history: userId={}, period={}-{}", quota.userId(), oldYear, oldMonth);
+        }
+
+        // 2. 重置週期並設定新用量
+        Instant now = Instant.now();
+        userQuotaRepository.resetPeriodAndSetUsageByUserId(
+            quota.userId(),
+            newYear, newMonth,
+            PeriodUtils.getPeriodStart(newYear, newMonth),
+            PeriodUtils.getPeriodEnd(newYear, newMonth),
+            inputTokens, outputTokens, totalTokens,
+            cost, requestCount,
+            now
+        );
+
+        log.info("Period reset: userId={}, {}-{} -> {}-{}", quota.userId(), oldYear, oldMonth, newYear, newMonth);
+    }
+
+    /**
+     * 累加用量（週期一致時）。
+     */
+    private void incrementUsage(UserQuota quota,
+            long inputTokens, long outputTokens, long totalTokens,
+            BigDecimal cost, int requestCount) {
+
+        Instant now = Instant.now();
+
+        // 累加用量（同時更新當期用量和總計）
+        userQuotaRepository.incrementUsageByUserId(
+            quota.userId(),
+            inputTokens, outputTokens, totalTokens,
+            cost, requestCount,
+            now
+        );
+
+        // 重算使用率（如果啟用配額）
+        recalculateUsagePercent(quota.userId(), quota, inputTokens, outputTokens, totalTokens, cost);
+    }
+
+    /**
+     * 重新計算用戶的配額使用率。
+     */
+    private void recalculateUsagePercent(String userId, UserQuota quota,
+            long addedInputTokens, long addedOutputTokens, long addedTotalTokens, BigDecimal addedCost) {
+
+        if (!quota.quotaEnabled()) {
+            return;
+        }
+
+        // 計算新的當期成本
+        BigDecimal newPeriodCost = (quota.periodCostUsd() != null ? quota.periodCostUsd() : BigDecimal.ZERO)
+            .add(addedCost);
+
+        // 計算有效配額上限
+        BigDecimal effectiveLimit = quota.getEffectiveCostLimit();
+
+        // 計算使用率
+        double usagePercent = UserQuota.calculateCostUsagePercent(newPeriodCost, effectiveLimit);
+        boolean exceeded = usagePercent >= 100;
+
+        // 更新狀態
+        userQuotaRepository.updateQuotaStatusByUserId(userId, usagePercent, exceeded, Instant.now());
+    }
+
+    /**
+     * 聚合用戶某月的模型 Token 使用分布。
+     */
+    private Map<String, Long> aggregateModelTokensForUser(String userId, int year, int month) {
+        // 查詢該用戶該月所有日期的 daily_user_usage
+        String startId = String.format("%d-%02d-01_%s", year, month, userId);
+        String endId = String.format("%d-%02d-31_%s", year, month, userId);
+
+        Query query = Query.query(Criteria.where("_id").gte(startId).lte(endId));
+        query.fields().include("modelBreakdown");
+
+        List<DailyUserUsage> usages = mongoTemplate.find(query, DailyUserUsage.class);
+
+        Map<String, Long> result = new HashMap<>();
+        for (DailyUserUsage usage : usages) {
+            if (usage.modelBreakdown() != null) {
+                usage.modelBreakdown().forEach((model, breakdown) -> {
+                    long tokens = breakdown.inputTokens() + breakdown.outputTokens();
+                    result.merge(model, tokens, Long::sum);
+                });
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 聚合用戶某月的模型成本分布。
+     */
+    private Map<String, BigDecimal> aggregateModelCostsForUser(String userId, int year, int month) {
+        String startId = String.format("%d-%02d-01_%s", year, month, userId);
+        String endId = String.format("%d-%02d-31_%s", year, month, userId);
+
+        Query query = Query.query(Criteria.where("_id").gte(startId).lte(endId));
+        query.fields().include("modelBreakdown");
+
+        List<DailyUserUsage> usages = mongoTemplate.find(query, DailyUserUsage.class);
+
+        Map<String, BigDecimal> result = new HashMap<>();
+        for (DailyUserUsage usage : usages) {
+            if (usage.modelBreakdown() != null) {
+                usage.modelBreakdown().forEach((model, breakdown) -> {
+                    result.merge(model, breakdown.costUsd(), BigDecimal::add);
+                });
+            }
+        }
+        return result;
     }
 
     /**

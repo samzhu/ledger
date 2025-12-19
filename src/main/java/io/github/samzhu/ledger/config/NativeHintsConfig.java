@@ -68,13 +68,29 @@ public class NativeHintsConfig {
                 .registerType(SystemStats.TopItem.class, MemberCategory.values())
                 // UserQuota 及其嵌套記錄
                 .registerType(UserQuota.class, MemberCategory.values())
-                .registerType(UserQuota.QuotaConfig.class, MemberCategory.values())
+                .registerType(UserQuota.Builder.class, MemberCategory.values())
                 // UsageQueryService 內部記錄
                 .registerType(UsageQueryService.ModelSummary.class, MemberCategory.values())
                 // UsageApiController 內部記錄
                 .registerType(UsageApiController.FlushResult.class, MemberCategory.values())
                 .registerType(UsageApiController.SettlementResult.class, MemberCategory.values())
                 .registerType(UsageApiController.ProcessResult.class, MemberCategory.values());
+
+            // 註冊 Quota API DTO 類別供 Jackson 反射使用
+            hints.reflection()
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaStatusResponse.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaConfigRequest.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.BonusGrantRequest.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaHistoryResponse.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaHistoryResponse.HistoryItem.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaHistoryResponse.UsageDetail.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaHistoryResponse.QuotaDetail.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.QuotaHistoryResponse.ModelDetail.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.BonusHistoryResponse.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.dto.api.BonusHistoryResponse.BonusItem.class, MemberCategory.values())
+                // BonusRecord 和 QuotaHistory document
+                .registerType(io.github.samzhu.ledger.document.BonusRecord.class, MemberCategory.values())
+                .registerType(io.github.samzhu.ledger.document.QuotaHistory.class, MemberCategory.values());
         }
     }
 }

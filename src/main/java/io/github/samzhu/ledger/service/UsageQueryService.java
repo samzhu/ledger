@@ -166,7 +166,7 @@ public class UsageQueryService {
      */
     public List<UserQuota> getRecentActiveUsers(int limit) {
         log.debug("Querying {} recent active users", limit);
-        return userQuotaRepository.findAllByOrderByLastActiveAtDesc(PageRequest.of(0, limit));
+        return userQuotaRepository.findAllByOrderByLastActiveAtDesc(PageRequest.of(0, limit)).getContent();
     }
 
     /**

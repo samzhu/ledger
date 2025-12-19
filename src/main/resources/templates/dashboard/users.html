@@ -101,14 +101,14 @@
                                 </svg>
                                 Exceeded
                             </span>
-                            <span th:if="${!user.quotaExceeded() && user.quotaConfig() != null && user.quotaConfig().enabled()}"
+                            <span th:if="${!user.quotaExceeded() && user.quotaEnabled()}"
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
                                 Active
                             </span>
-                            <span th:if="${user.quotaConfig() == null || !user.quotaConfig().enabled()}"
+                            <span th:if="${!user.quotaEnabled()}"
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                 No Quota
                             </span>
@@ -122,21 +122,23 @@
                         <td class="px-6 py-4 text-right text-sm"
                             th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
 
-                        <!-- Quota Usage Progress -->
+                        <!-- Quota Usage Progress (Cost-based) -->
                         <td class="px-6 py-4">
-                            <div th:if="${user.quotaConfig() != null && user.quotaConfig().enabled()}" class="w-32 mx-auto">
+                            <div th:if="${user.quotaEnabled()}" class="w-32 mx-auto">
                                 <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-gray-500">Token</span>
-                                    <span th:class="${user.tokenUsagePercent() >= 90} ? 'text-red-600 font-medium' : (${user.tokenUsagePercent() >= 70} ? 'text-yellow-600' : 'text-gray-600')"
-                                          th:text="${#numbers.formatDecimal(user.tokenUsagePercent(), 1, 1) + '%'}">0%</span>
+                                    <span class="text-gray-500">Cost</span>
+                                    <span th:class="${user.costUsagePercent() >= 90} ? 'text-red-600 font-medium' : (${user.costUsagePercent() >= 70} ? 'text-yellow-600' : 'text-gray-600')"
+                                          th:text="${#numbers.formatDecimal(user.costUsagePercent(), 1, 1) + '%'}">0%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-1.5">
                                     <div class="h-1.5 rounded-full transition-all duration-300"
-                                         th:classappend="${user.tokenUsagePercent() >= 90} ? 'bg-red-500' : (${user.tokenUsagePercent() >= 70} ? 'bg-yellow-500' : 'bg-green-500')"
-                                         th:style="'width: ' + ${T(Math).min(100, user.tokenUsagePercent())} + '%'"></div>
+                                         th:classappend="${user.costUsagePercent() >= 90} ? 'bg-red-500' : (${user.costUsagePercent() >= 70} ? 'bg-yellow-500' : 'bg-green-500')"
+                                         th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
                                 </div>
+                                <div class="text-xs text-gray-400 mt-1 text-center"
+                                     th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)} + ' / $' + ${#numbers.formatDecimal(user.costLimitUsd() != null ? user.costLimitUsd() : 0, 1, 2)}">$0 / $0</div>
                             </div>
-                            <div th:if="${user.quotaConfig() == null || !user.quotaConfig().enabled()}" class="text-center text-xs text-gray-400">
+                            <div th:if="${!user.quotaEnabled()}" class="text-center text-xs text-gray-400">
                                 -
                             </div>
                         </td>

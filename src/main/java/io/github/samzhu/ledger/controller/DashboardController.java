@@ -144,7 +144,7 @@ public class DashboardController {
 
         // Pre-compute summary statistics (SpEL doesn't support lambdas)
         long usersQuotaEnabledCount = users.stream()
-            .filter(u -> u.quotaConfig() != null && u.quotaConfig().enabled())
+            .filter(UserQuota::quotaEnabled)
             .count();
         long usersQuotaExceededCount = users.stream()
             .filter(UserQuota::quotaExceeded)
@@ -308,5 +308,50 @@ public class DashboardController {
         log.debug("Model detail loaded: modelName={}, {} daily records", modelName, usages.size());
 
         return "dashboard/model-detail";
+    }
+
+    /**
+     * 配額管理頁面。
+     *
+     * <p>顯示所有啟用配額的用戶及其使用狀況。
+     *
+     * @param model Spring MVC Model
+     * @return 視圖名稱
+     */
+    @GetMapping("/quota")
+    public String quota(Model model) {
+        log.info("Dashboard request: quota management");
+
+        List<UserQuota> allUsers = queryService.getAllUsers();
+
+        // Filter users with quota enabled
+        List<UserQuota> usersWithQuota = allUsers.stream()
+            .filter(UserQuota::quotaEnabled)
+            .sorted((a, b) -> Double.compare(b.costUsagePercent(), a.costUsagePercent()))
+            .toList();
+
+        // Calculate summary statistics
+        long quotaEnabledCount = usersWithQuota.size();
+        long exceededCount = usersWithQuota.stream()
+            .filter(UserQuota::quotaExceeded)
+            .count();
+        java.math.BigDecimal totalPeriodCost = usersWithQuota.stream()
+            .map(u -> u.periodCostUsd() != null ? u.periodCostUsd() : java.math.BigDecimal.ZERO)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        java.math.BigDecimal totalBonusGranted = usersWithQuota.stream()
+            .map(u -> u.bonusCostUsd() != null ? u.bonusCostUsd() : java.math.BigDecimal.ZERO)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        model.addAttribute("currentPage", "quota");
+        model.addAttribute("pageTitle", "Quota Management");
+        model.addAttribute("usersWithQuota", usersWithQuota);
+        model.addAttribute("quotaEnabledCount", quotaEnabledCount);
+        model.addAttribute("exceededCount", exceededCount);
+        model.addAttribute("totalPeriodCost", totalPeriodCost);
+        model.addAttribute("totalBonusGranted", totalBonusGranted);
+
+        log.debug("Quota page loaded: {} users with quota, {} exceeded", quotaEnabledCount, exceededCount);
+
+        return "dashboard/quota";
     }
 }
