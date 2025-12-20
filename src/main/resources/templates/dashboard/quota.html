@@ -4,244 +4,324 @@
 <body>
 <div th:fragment="content">
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <!-- Total Users with Quota -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Quota Enabled</p>
-                    <p class="text-2xl font-bold text-purple-600 mt-1" th:text="${quotaEnabledCount}">0</p>
-                </div>
-                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <!-- Quota Enabled -->
+        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Quota Enabled</p>
+                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
                 </div>
             </div>
+            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${quotaEnabledCount}">0</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Users with quota</p>
         </div>
 
-        <!-- Exceeded Users -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Exceeded Quota</p>
-                    <p class="text-2xl font-bold mt-1"
-                       th:classappend="${exceededCount > 0} ? 'text-red-600' : 'text-gray-800'"
-                       th:text="${exceededCount}">0</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center"
-                     th:classappend="${exceededCount > 0} ? 'bg-red-100' : 'bg-gray-100'">
-                    <svg class="w-6 h-6"
-                         th:classappend="${exceededCount > 0} ? 'text-red-600' : 'text-gray-600'"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Exceeded Quota -->
+        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Exceeded Quota</p>
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                     th:classappend="${exceededCount > 0} ? 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/25' : 'bg-gradient-to-br from-slate-400 to-slate-500 shadow-slate-400/25'">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                 </div>
             </div>
+            <p class="text-xl sm:text-2xl font-bold"
+               th:classappend="${exceededCount > 0} ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
+               th:text="${exceededCount}">0</p>
+            <p class="text-xs mt-1"
+               th:classappend="${exceededCount > 0} ? 'text-red-400 dark:text-red-500' : 'text-slate-400 dark:text-slate-500'"
+               th:text="${exceededCount > 0} ? 'Needs attention' : 'All within limits'">Status</p>
         </div>
 
-        <!-- Total Period Cost -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Period Cost (All Users)</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1"
-                       th:text="'$' + ${#numbers.formatDecimal(totalPeriodCost, 1, 2)}">$0.00</p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Period Cost -->
+        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Period Cost</p>
+                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
             </div>
+            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white"
+               th:text="'$' + ${#numbers.formatDecimal(totalPeriodCost, 1, 2)}">$0.00</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Total this period</p>
         </div>
 
-        <!-- Total Bonus Granted -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Total Bonus Granted</p>
-                    <p class="text-2xl font-bold text-emerald-600 mt-1"
-                       th:text="'$' + ${#numbers.formatDecimal(totalBonusGranted, 1, 2)}">$0.00</p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Total Bonus -->
+        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Bonus</p>
+                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
                     </svg>
                 </div>
             </div>
+            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white"
+               th:text="'$' + ${#numbers.formatDecimal(totalBonusGranted, 1, 2)}">$0.00</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Bonus granted</p>
         </div>
     </div>
 
     <!-- Quota Cards Grid (Ring Charts) -->
-    <div th:if="${!usersWithQuota.isEmpty()}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+    <div th:if="${!usersWithQuota.isEmpty()}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
         <div th:each="user : ${usersWithQuota}"
-             class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+             class="glass-card rounded-2xl p-4 sm:p-5 group hover:scale-[1.02] transition-all duration-300">
             <!-- Header -->
             <div class="flex justify-between items-center mb-4">
                 <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                   class="text-white font-medium hover:text-blue-400 truncate max-w-[140px]"
+                   class="text-slate-800 dark:text-white font-medium hover:text-indigo-600 dark:hover:text-indigo-400 truncate max-w-[140px] text-sm transition-colors"
                    th:text="${user.userId}" th:title="${user.userId}">user-id</a>
                 <span th:if="${user.quotaExceeded()}"
-                      class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                      class="w-3 h-3 rounded-full bg-red-500 animate-pulse shadow-lg shadow-red-500/50"></span>
                 <span th:if="${!user.quotaExceeded() && user.costUsagePercent() >= 80}"
-                      class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      class="w-3 h-3 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></span>
                 <span th:if="${!user.quotaExceeded() && user.costUsagePercent() < 80}"
-                      class="w-3 h-3 rounded-full bg-green-500"></span>
+                      class="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></span>
             </div>
 
             <!-- Ring Chart -->
             <div class="flex justify-center mb-4">
                 <div class="relative">
-                    <svg class="w-32 h-32 transform -rotate-90">
+                    <svg class="w-24 h-24 sm:w-28 sm:h-28 transform -rotate-90">
                         <!-- Background circle -->
-                        <circle cx="64" cy="64" r="56"
-                                stroke="#374151" stroke-width="8" fill="none"/>
+                        <circle cx="50%" cy="50%" r="45%"
+                                class="stroke-slate-200 dark:stroke-slate-700" stroke-width="8" fill="none"/>
                         <!-- Progress circle -->
-                        <circle cx="64" cy="64" r="56"
-                                th:attr="stroke=${user.quotaExceeded() ? '#ef4444' : (user.costUsagePercent() >= 80 ? '#f59e0b' : '#10b981')}"
+                        <circle cx="50%" cy="50%" r="45%"
+                                th:attr="stroke=${user.quotaExceeded() ? 'url(#gradientRed)' : (user.costUsagePercent() >= 80 ? 'url(#gradientAmber)' : 'url(#gradientGreen)')}"
                                 stroke-width="8" fill="none"
                                 stroke-linecap="round"
-                                th:style="'stroke-dasharray: 352; stroke-dashoffset: ' + ${352 - (352 * T(Math).min(100, user.costUsagePercent()) / 100)}"/>
+                                class="drop-shadow-lg"
+                                th:style="'stroke-dasharray: 283; stroke-dashoffset: ' + ${283 - (283 * T(Math).min(100, user.costUsagePercent()) / 100)}"/>
+                        <!-- Gradient definitions -->
+                        <defs>
+                            <linearGradient id="gradientRed" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#ef4444"/>
+                                <stop offset="100%" stop-color="#f87171"/>
+                            </linearGradient>
+                            <linearGradient id="gradientAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#f59e0b"/>
+                                <stop offset="100%" stop-color="#fbbf24"/>
+                            </linearGradient>
+                            <linearGradient id="gradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#10b981"/>
+                                <stop offset="100%" stop-color="#34d399"/>
+                            </linearGradient>
+                        </defs>
                     </svg>
                     <!-- Percentage Text -->
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-2xl font-bold"
-                              th:classappend="${user.quotaExceeded() ? 'text-red-500' : (user.costUsagePercent() >= 80 ? 'text-yellow-500' : 'text-green-500')}"
-                              th:text="${#numbers.formatDecimal(user.costUsagePercent(), 1, 2) + '%'}">0%</span>
+                        <span class="text-lg sm:text-xl font-bold"
+                              th:classappend="${user.quotaExceeded() ? 'text-red-500 dark:text-red-400' : (user.costUsagePercent() >= 80 ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400')}"
+                              th:text="${#numbers.formatDecimal(user.costUsagePercent(), 1, 1) + '%'}">0%</span>
                     </div>
                 </div>
             </div>
 
             <!-- Details -->
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between text-gray-400">
-                    <span>Period Cost</span>
-                    <span class="text-white font-medium"
+            <div class="space-y-2 text-xs sm:text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 dark:text-slate-400">Period Cost</span>
+                    <span class="text-slate-800 dark:text-white font-medium"
                           th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)}">$0.00</span>
                 </div>
-                <div class="flex justify-between text-gray-400">
-                    <span>Limit</span>
-                    <span class="text-white"
+                <div class="flex justify-between">
+                    <span class="text-slate-500 dark:text-slate-400">Limit</span>
+                    <span class="text-slate-800 dark:text-white"
                           th:text="'$' + ${#numbers.formatDecimal(user.getEffectiveCostLimit(), 1, 2)}">$10.00</span>
                 </div>
                 <div th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}"
-                     class="flex justify-between text-gray-400">
-                    <span>Bonus</span>
-                    <span class="text-emerald-400"
+                     class="flex justify-between">
+                    <span class="text-slate-500 dark:text-slate-400">Bonus</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 font-medium"
                           th:text="'+$' + ${#numbers.formatDecimal(user.bonusCostUsd(), 1, 2)}">+$0.00</span>
                 </div>
-                <div class="flex justify-between text-gray-400 pt-2 border-t border-gray-700">
-                    <span>Period</span>
-                    <span class="text-white"
+                <div class="flex justify-between pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                    <span class="text-slate-500 dark:text-slate-400">Period</span>
+                    <span class="text-slate-800 dark:text-white"
                           th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</span>
                 </div>
-                <div class="flex justify-between text-gray-400">
-                    <span>Status</span>
-                    <span th:if="${user.quotaExceeded()}" class="text-red-400">Exceeded</span>
-                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() >= 80}" class="text-yellow-400">Warning</span>
-                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() < 80}" class="text-green-400">Healthy</span>
+                <div class="flex justify-between">
+                    <span class="text-slate-500 dark:text-slate-400">Status</span>
+                    <span th:if="${user.quotaExceeded()}" class="text-red-500 dark:text-red-400 font-medium">Exceeded</span>
+                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() >= 80}" class="text-amber-500 dark:text-amber-400 font-medium">Warning</span>
+                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() < 80}" class="text-emerald-500 dark:text-emerald-400 font-medium">Healthy</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Exceeded Users Alert -->
-    <div th:if="${exceededCount > 0}" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+    <div th:if="${exceededCount > 0}"
+         class="glass-card rounded-2xl p-4 mb-6 border-l-4 border-red-500 dark:border-red-400">
         <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
+            <div class="w-9 h-9 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/25 flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
             <div>
-                <h3 class="text-sm font-medium text-red-800">Attention Required</h3>
-                <p class="text-sm text-red-700 mt-1" th:text="${exceededCount} + ' user(s) have exceeded their quota limit.'">Users have exceeded quota.</p>
+                <h3 class="text-sm font-semibold text-red-700 dark:text-red-400">Attention Required</h3>
+                <p class="text-sm text-red-600 dark:text-red-300/80 mt-1" th:text="${exceededCount} + ' user(s) have exceeded their quota limit.'">Users have exceeded quota.</p>
             </div>
         </div>
     </div>
 
     <!-- Users with Quota Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-800">Users with Quota</h2>
-                <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-500" th:text="${usersWithQuota.size()} + ' users'">0 users</span>
-                </div>
+    <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h2 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Users with Quota</h2>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300"
+                      th:text="${usersWithQuota.size()} + ' users'">0 users</span>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50">
+        <!-- Mobile Card View -->
+        <div class="lg:hidden divide-y divide-slate-200/50 dark:divide-slate-700/50">
+            <div th:each="user : ${usersWithQuota}" class="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                <div class="flex justify-between items-start mb-3">
+                    <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
+                       class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium text-sm truncate max-w-[180px]"
+                       th:text="${user.userId}">user-id</a>
+                    <!-- Status Badge -->
+                    <span th:if="${user.quotaExceeded()}"
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
+                        Exceeded
+                    </span>
+                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() >= 80}"
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+                        Warning
+                    </span>
+                    <span th:if="${!user.quotaExceeded() && user.costUsagePercent() < 80}"
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                        OK
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400">Limit:</span>
+                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="'$' + ${#numbers.formatDecimal(user.costLimitUsd() != null ? user.costLimitUsd() : 0, 1, 2)}">$0</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400">Cost:</span>
+                        <span class="font-medium ml-1"
+                              th:classappend="${user.quotaExceeded()} ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
+                              th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)}">$0</span>
+                    </div>
+                    <div th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                        <span class="text-slate-500 dark:text-slate-400">Bonus:</span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-medium ml-1" th:text="'+$' + ${#numbers.formatDecimal(user.bonusCostUsd(), 1, 2)}">+$0</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400">Period:</span>
+                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</span>
+                    </div>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-500 dark:text-slate-400">Usage</span>
+                        <span th:class="${user.costUsagePercent() >= 100} ? 'text-red-600 dark:text-red-400 font-medium' : (${user.costUsagePercent() >= 80} ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300')"
+                              th:text="${#numbers.formatDecimal(user.costUsagePercent(), 1, 1) + '%'}">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full transition-all duration-500"
+                             th:classappend="${user.costUsagePercent() >= 100} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 80} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
+                             th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
+                    </div>
+                </div>
+            </div>
+            <div th:if="${usersWithQuota.isEmpty()}" class="p-8 text-center">
+                <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <p class="text-slate-600 dark:text-slate-400 text-sm font-medium">No users with quota enabled</p>
+                <p class="text-slate-400 dark:text-slate-500 text-xs mt-1">Enable quota for users in their detail page</p>
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+                <thead class="bg-slate-50/50 dark:bg-slate-800/30">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Limit</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Bonus</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Period Cost</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">User</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Period</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Cost Limit</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Bonus</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Period Cost</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Usage</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr th:each="user : ${usersWithQuota}" class="hover:bg-gray-50">
+                <tbody class="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                    <tr th:each="user : ${usersWithQuota}" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                         <!-- User ID -->
                         <td class="px-6 py-4">
                             <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                               class="text-blue-600 hover:underline font-medium"
+                               class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium transition-colors"
                                th:text="${user.userId}">user-id</a>
                         </td>
 
                         <!-- Status Badge -->
                         <td class="px-6 py-4 text-center">
                             <span th:if="${user.quotaExceeded()}"
-                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
                                 Exceeded
                             </span>
                             <span th:if="${!user.quotaExceeded() && user.costUsagePercent() >= 80}"
-                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
                                 Warning
                             </span>
                             <span th:if="${!user.quotaExceeded() && user.costUsagePercent() < 80}"
-                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
                                 OK
                             </span>
                         </td>
 
                         <!-- Period -->
-                        <td class="px-6 py-4 text-center text-sm text-gray-600"
+                        <td class="px-6 py-4 text-center text-sm text-slate-600 dark:text-slate-300"
                             th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</td>
 
                         <!-- Cost Limit -->
-                        <td class="px-6 py-4 text-right text-sm"
+                        <td class="px-6 py-4 text-right text-sm text-slate-800 dark:text-white font-medium"
                             th:text="'$' + ${#numbers.formatDecimal(user.costLimitUsd() != null ? user.costLimitUsd() : 0, 1, 2)}">$10.00</td>
 
                         <!-- Bonus -->
                         <td class="px-6 py-4 text-right text-sm">
                             <span th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}"
-                                  class="text-emerald-600 font-medium"
+                                  class="text-emerald-600 dark:text-emerald-400 font-medium"
                                   th:text="'+$' + ${#numbers.formatDecimal(user.bonusCostUsd(), 1, 2)}">+$0.00</span>
                             <span th:if="${user.bonusCostUsd() == null || user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) <= 0}"
-                                  class="text-gray-400">-</span>
+                                  class="text-slate-400 dark:text-slate-500">-</span>
                         </td>
 
                         <!-- Period Cost -->
-                        <td class="px-6 py-4 text-right text-sm font-medium"
-                            th:classappend="${user.quotaExceeded()} ? 'text-red-600' : 'text-gray-800'"
+                        <td class="px-6 py-4 text-right text-sm font-semibold"
+                            th:classappend="${user.quotaExceeded()} ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
                             th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)}">$0.00</td>
 
                         <!-- Usage Progress -->
                         <td class="px-6 py-4">
-                            <div class="w-24 mx-auto">
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-gray-500"></span>
-                                    <span th:class="${user.costUsagePercent() >= 100} ? 'text-red-600 font-medium' : (${user.costUsagePercent() >= 80} ? 'text-yellow-600' : 'text-gray-600')"
+                            <div class="w-28 mx-auto">
+                                <div class="flex justify-end text-xs mb-1">
+                                    <span th:class="${user.costUsagePercent() >= 100} ? 'text-red-600 dark:text-red-400 font-semibold' : (${user.costUsagePercent() >= 80} ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-600 dark:text-slate-300')"
                                           th:text="${#numbers.formatDecimal(user.costUsagePercent(), 1, 1) + '%'}">0%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-1.5">
-                                    <div class="h-1.5 rounded-full transition-all duration-300"
-                                         th:classappend="${user.costUsagePercent() >= 100} ? 'bg-red-500' : (${user.costUsagePercent() >= 80} ? 'bg-yellow-500' : 'bg-green-500')"
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all duration-500"
+                                         th:classappend="${user.costUsagePercent() >= 100} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 80} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
                                          th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
                                 </div>
                             </div>
@@ -250,19 +330,24 @@
                         <!-- Actions -->
                         <td class="px-6 py-4 text-right">
                             <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
                                 Manage
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
                             </a>
                         </td>
                     </tr>
                     <tr th:if="${usersWithQuota.isEmpty()}">
                         <td colspan="8" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center">
-                                <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                </svg>
-                                <p class="text-gray-500 text-sm">No users with quota enabled</p>
-                                <p class="text-gray-400 text-xs mt-1">Enable quota for users in their detail page</p>
+                                <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-2xl flex items-center justify-center mb-4">
+                                    <svg class="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm font-medium">No users with quota enabled</p>
+                                <p class="text-slate-400 dark:text-slate-500 text-xs mt-1">Enable quota for users in their detail page</p>
                             </div>
                         </td>
                     </tr>
