@@ -78,3 +78,20 @@ dependencyManagement {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Git Properties 配置 - 正確識別 tags
+gitProperties {
+	customProperty 'git.closest.tag.name', {
+		// CI 環境：優先使用 GitHub Actions 的 GITHUB_REF_NAME
+		def refName = System.getenv('GITHUB_REF_NAME')
+		if (refName && refName =~ /^\d+\.\d+\.\d+.*/) {
+			return refName
+		}
+		// 本地環境：使用 git describe
+		try {
+			return git.describe(tags: true, always: false) ?: ''
+		} catch (Exception e) {
+			return ''
+		}
+	}
+}

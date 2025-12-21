@@ -69,6 +69,24 @@
         </div>
     </div>
 
+    <!-- SVG Gradient Definitions (defined once, outside the loop) -->
+    <svg class="hidden" aria-hidden="true">
+        <defs>
+            <linearGradient id="gradientRed" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ef4444"/>
+                <stop offset="100%" stop-color="#f87171"/>
+            </linearGradient>
+            <linearGradient id="gradientAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+            </linearGradient>
+            <linearGradient id="gradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#34d399"/>
+            </linearGradient>
+        </defs>
+    </svg>
+
     <!-- Quota Cards Grid (Ring Charts) -->
     <div th:if="${!usersWithQuota.isEmpty()}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
         <div th:each="user : ${usersWithQuota}"
@@ -100,21 +118,6 @@
                                 stroke-linecap="round"
                                 class="drop-shadow-lg"
                                 th:style="'stroke-dasharray: 283; stroke-dashoffset: ' + ${283 - (283 * T(Math).min(100, user.costUsagePercent()) / 100)}"/>
-                        <!-- Gradient definitions -->
-                        <defs>
-                            <linearGradient id="gradientRed" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#ef4444"/>
-                                <stop offset="100%" stop-color="#f87171"/>
-                            </linearGradient>
-                            <linearGradient id="gradientAmber" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#f59e0b"/>
-                                <stop offset="100%" stop-color="#fbbf24"/>
-                            </linearGradient>
-                            <linearGradient id="gradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#10b981"/>
-                                <stop offset="100%" stop-color="#34d399"/>
-                            </linearGradient>
-                        </defs>
                     </svg>
                     <!-- Percentage Text -->
                     <div class="absolute inset-0 flex items-center justify-center">
