@@ -76,6 +76,11 @@ public class NativeHintsConfig {
                 .registerType(UsageApiController.SettlementResult.class, MemberCategory.values())
                 .registerType(UsageApiController.ProcessResult.class, MemberCategory.values());
 
+            // 註冊 SpEL 表達式中使用的 JDK 類別（用於 Thymeleaf 模板的 T() 運算符）
+            hints.reflection()
+                .registerType(java.lang.Math.class, MemberCategory.values())
+                .registerType(java.math.BigDecimal.class, MemberCategory.values());
+
             // 註冊 Quota API DTO 類別供 Jackson 反射使用
             hints.reflection()
                 .registerType(io.github.samzhu.ledger.dto.api.QuotaStatusResponse.class, MemberCategory.values())

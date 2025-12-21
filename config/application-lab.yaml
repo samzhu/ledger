@@ -30,11 +30,14 @@ management:
   tracing:
     sampling:
       probability: 1.0
+  info:
+    git:
+      mode: full  # 顯示完整 git 資訊 (commit, branch, build time 等)
   endpoints:
     web:
       exposure:
         # 注意: 移除 env,configprops 避免洩漏 secrets
-        include: "*"                                                                                                                                       
+        include: "*"
         exclude: env,configprops
 
 # 日誌 - DEBUG 便於開發

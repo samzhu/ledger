@@ -260,7 +260,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <span>Ledger v1.0</span>
+                <span th:title="${gitBranch} + ' @ ' + ${gitCommitId}"
+                      th:text="'Ledger ' + ${appVersion}">Ledger dev</span>
             </div>
         </div>
     </aside>
@@ -353,8 +354,19 @@
             </a>
         </nav>
 
-        <!-- Desktop Footer with Collapse Toggle -->
-        <div class="p-3 border-t border-slate-800/50">
+        <!-- Desktop Footer with Version & Collapse Toggle -->
+        <div class="p-3 border-t border-slate-800/50 space-y-2">
+            <!-- Version Info -->
+            <div class="flex items-center justify-center gap-2 px-3 py-2 text-slate-500 hover:text-slate-400 transition-colors cursor-default"
+                 th:title="${gitBranch} + ' @ ' + ${gitCommitId}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <span class="nav-label nav-label-transition text-xs whitespace-nowrap"
+                      th:text="${appVersion}">dev</span>
+            </div>
+            <!-- Collapse Toggle -->
             <button id="sidebar-toggle"
                     onclick="SidebarManager.toggle()"
                     class="w-full flex items-center justify-center gap-2 px-3 py-2.5
