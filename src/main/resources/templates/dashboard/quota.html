@@ -88,7 +88,7 @@
     </svg>
 
     <!-- Quota Cards Grid (Ring Charts) -->
-    <div th:if="${not #lists.isEmpty(usersWithQuota)}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+    <div th:if="${usersWithQuota != null and usersWithQuota.size() > 0}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
         <div th:each="user : ${usersWithQuota}"
              class="glass-card rounded-2xl p-4 sm:p-5 group hover:scale-[1.02] transition-all duration-300">
             <!-- Header -->
@@ -242,7 +242,7 @@
                     </div>
                 </div>
             </div>
-            <div th:if="${#lists.isEmpty(usersWithQuota)}" class="p-8 text-center">
+            <div th:if="${usersWithQuota == null or usersWithQuota.size() == 0}" class="p-8 text-center">
                 <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -341,7 +341,7 @@
                             </a>
                         </td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(usersWithQuota)}">
+                    <tr th:if="${usersWithQuota == null or usersWithQuota.size() == 0}">
                         <td colspan="8" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center">
                                 <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-2xl flex items-center justify-center mb-4">
