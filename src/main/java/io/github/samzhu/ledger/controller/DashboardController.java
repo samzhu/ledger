@@ -325,10 +325,11 @@ public class DashboardController {
         List<UserQuota> allUsers = queryService.getAllUsers();
 
         // Filter users with quota enabled
-        List<UserQuota> usersWithQuota = allUsers.stream()
+        // Note: Using ArrayList instead of .toList() for SpEL compatibility with Java 25
+        List<UserQuota> usersWithQuota = new java.util.ArrayList<>(allUsers.stream()
             .filter(UserQuota::quotaEnabled)
             .sorted((a, b) -> Double.compare(b.costUsagePercent(), a.costUsagePercent()))
-            .toList();
+            .toList());
 
         // Calculate summary statistics
         long quotaEnabledCount = usersWithQuota.size();
