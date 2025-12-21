@@ -106,6 +106,42 @@ Move gradient definitions **outside** the loop:
 
 ---
 
+## Native Image: Joda-Time Resource Missing
+
+### Problem Description
+
+When building a GraalVM Native Image, the application fails at runtime with a missing Joda-Time timezone resource error.
+
+### Error Symptoms
+
+```
+Resource not found: "org/joda/time/tz/data/ZoneInfoMap"
+```
+
+### Root Cause
+
+`jackson-datatype-joda` is transitively pulled in by Spring Cloud Function (via Spring Cloud Stream). The Joda-Time library requires timezone data files that are not automatically included in the Native Image.
+
+### Solution
+
+Exclude the `jackson-datatype-joda` dependency since the project uses `java.time` (not Joda-Time):
+
+```groovy
+implementation('org.springframework.cloud:spring-cloud-stream') {
+    // Exclude Joda-Time Jackson module - not needed (using java.time)
+    // and causes Native Image issues with missing timezone resources
+    exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-joda'
+}
+```
+
+### Notes
+
+- This is safe if your project uses `java.time` API (LocalDate, ZonedDateTime, etc.)
+- Spring Boot 3.x uses `jackson-datatype-jsr310` for `java.time` support by default
+- Joda-Time is a legacy library superseded by `java.time` since Java 8
+
+---
+
 ## General Best Practices
 
 ### Thymeleaf Template Guidelines

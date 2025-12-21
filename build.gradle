@@ -48,7 +48,11 @@ dependencies {
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	runtimeOnly 'io.micrometer:micrometer-registry-otlp'
 	// Event Driven
-	implementation 'org.springframework.cloud:spring-cloud-stream'
+	implementation('org.springframework.cloud:spring-cloud-stream') {
+		// Exclude Joda-Time Jackson module - not needed (using java.time)
+		// and causes Native Image issues with missing timezone resources
+		exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-joda'
+	}
 	// 生產環境使用 GCP Pub/Sub
 	implementation "com.google.cloud:spring-cloud-gcp-pubsub-stream-binder"
 	// GCP Secret Manager 整合 (sm@ 語法)
