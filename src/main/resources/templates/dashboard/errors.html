@@ -3,311 +3,327 @@
       th:replace="~{layout/main :: html(content=~{::content})}">
 <body>
 <div th:fragment="content">
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <!-- Total Errors -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Errors</p>
-                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                </div>
-            </div>
-            <p id="totalErrorsCount" class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">-</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Recent errors</p>
-        </div>
-
-        <!-- Error Types -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Error Types</p>
-                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                </div>
-            </div>
-            <p id="errorTypesCount" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">-</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique types</p>
-        </div>
-
-        <!-- Affected Users -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Affected Users</p>
-                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p id="affectedUsersCount" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">-</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique users</p>
-        </div>
-
-        <!-- Affected Models -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Affected Models</p>
-                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                    </svg>
-                </div>
-            </div>
-            <p id="affectedModelsCount" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">-</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique models</p>
-        </div>
-    </div>
-
-    <!-- Loading State -->
-    <div id="loadingState" class="glass-card rounded-2xl p-8 text-center">
-        <div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p class="text-slate-500 dark:text-slate-400">Loading error data...</p>
-    </div>
-
-    <!-- Empty State -->
-    <div id="emptyState" class="glass-card rounded-2xl p-8 text-center hidden">
-        <div class="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-800/50 dark:to-emerald-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-        </div>
-        <p class="text-slate-600 dark:text-slate-400 font-medium">No errors found</p>
-        <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">All API requests are working correctly</p>
-    </div>
-
-    <!-- Error Table -->
-    <div id="errorTable" class="glass-card rounded-2xl overflow-hidden hidden">
-        <!-- Table Header -->
-        <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h2 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Recent Errors</h2>
-                <div class="flex items-center gap-2">
-                    <span id="errorCountBadge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">0 errors</span>
-                    <button onclick="refreshErrors()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Refresh">
-                        <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    <div id="errors-app" v-cloak>
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <!-- Total Errors -->
+            <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Errors</p>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
-                    </button>
+                    </div>
                 </div>
+                <p class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{{ summary.totalErrors }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Recent errors</p>
+            </div>
+
+            <!-- Error Types -->
+            <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Error Types</p>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ summary.errorTypes }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique types</p>
+            </div>
+
+            <!-- Affected Users -->
+            <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Affected Users</p>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ summary.affectedUsers }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique users</p>
+            </div>
+
+            <!-- Affected Models -->
+            <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Affected Models</p>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ summary.affectedModels }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Unique models</p>
             </div>
         </div>
 
-        <!-- Mobile Card View -->
-        <div id="mobileErrorList" class="lg:hidden divide-y divide-slate-200/50 dark:divide-slate-700/50">
-            <!-- Populated by JavaScript -->
+        <!-- Loading State -->
+        <div v-if="loading" class="glass-card rounded-2xl p-8 text-center">
+            <div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-slate-500 dark:text-slate-400">Loading error data...</p>
         </div>
 
-        <!-- Desktop Table View -->
-        <div class="hidden lg:block overflow-x-auto">
-            <table class="w-full min-w-[1000px]">
-                <thead class="bg-slate-50/50 dark:bg-slate-800/30">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-8"></th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Time</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">User</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Error Type</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Model</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Latency</th>
-                    </tr>
-                </thead>
-                <tbody id="desktopErrorList" class="divide-y divide-slate-200/50 dark:divide-slate-700/50">
-                    <!-- Populated by JavaScript -->
-                </tbody>
-            </table>
+        <!-- Empty State -->
+        <div v-else-if="errors.length === 0" class="glass-card rounded-2xl p-8 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-800/50 dark:to-emerald-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 font-medium">No errors found</p>
+            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">All API requests are working correctly</p>
         </div>
-    </div>
 
-    <!-- JavaScript for Data Fetching and UI -->
-    <script>
-        // State
-        let errorsData = [];
-        let expandedRows = new Set();
-
-        // Fetch errors from API
-        async function fetchErrors() {
-            try {
-                const response = await fetch('/api/v1/errors?limit=20');
-                if (!response.ok) throw new Error('Failed to fetch errors');
-                const data = await response.json();
-                return data.errors || [];
-            } catch (error) {
-                console.error('Error fetching errors:', error);
-                return [];
-            }
-        }
-
-        // Update summary cards
-        function updateSummaryCards(errors) {
-            document.getElementById('totalErrorsCount').textContent = errors.length;
-
-            const errorTypes = new Set(errors.map(e => e.errorType).filter(Boolean));
-            document.getElementById('errorTypesCount').textContent = errorTypes.size;
-
-            const affectedUsers = new Set(errors.map(e => e.userId).filter(Boolean));
-            document.getElementById('affectedUsersCount').textContent = affectedUsers.size;
-
-            const affectedModels = new Set(errors.map(e => e.model).filter(Boolean));
-            document.getElementById('affectedModelsCount').textContent = affectedModels.size;
-        }
-
-        // Format timestamp to local time
-        function formatTime(isoString) {
-            if (!isoString) return '-';
-            return dayjs(isoString).format('YYYY-MM-DD HH:mm:ss');
-        }
-
-        // Toggle row expansion
-        function toggleRow(index) {
-            if (expandedRows.has(index)) {
-                expandedRows.delete(index);
-            } else {
-                expandedRows.add(index);
-            }
-            renderErrors();
-        }
-
-        // Generate expanded details HTML
-        function getDetailsHTML(error) {
-            return `
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50/50 dark:bg-slate-800/30 text-sm">
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Trace ID</span>
-                        <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">${error.traceId || '-'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Anthropic Request ID</span>
-                        <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">${error.anthropicRequestId || '-'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Message ID</span>
-                        <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">${error.messageId || '-'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Key Alias</span>
-                        <span class="text-slate-700 dark:text-slate-300">${error.keyAlias || '-'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Input Tokens</span>
-                        <span class="text-slate-700 dark:text-slate-300">${error.inputTokens?.toLocaleString() || '0'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Output Tokens</span>
-                        <span class="text-slate-700 dark:text-slate-300">${error.outputTokens?.toLocaleString() || '0'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Stream</span>
-                        <span class="text-slate-700 dark:text-slate-300">${error.stream ? 'Yes' : 'No'}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Batch ID</span>
-                        <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">${error.batchId || '-'}</span>
+        <!-- Error Table -->
+        <template v-else>
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <!-- Table Header -->
+                <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <h2 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Recent Errors</h2>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">{{ errors.length }} errors</span>
+                            <button @click="fetchData" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Refresh">
+                                <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            `;
-        }
 
-        // Render errors to tables
-        function renderErrors() {
-            const mobileList = document.getElementById('mobileErrorList');
-            const desktopList = document.getElementById('desktopErrorList');
-
-            // Mobile view
-            mobileList.innerHTML = errorsData.map((error, index) => {
-                const isExpanded = expandedRows.has(index);
-                return `
-                    <div class="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <div class="flex justify-between items-start mb-2 cursor-pointer" onclick="toggleRow(${index})">
+                <!-- Mobile Card View -->
+                <div class="lg:hidden divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                    <div v-for="(error, index) in errors" :key="index" class="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <div class="flex justify-between items-start mb-2 cursor-pointer" @click="toggleRow(index)">
                             <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-slate-400 transition-transform" :class="{ 'rotate-90': expandedRows.has(index) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                <span class="text-xs text-slate-500 dark:text-slate-400">${formatTime(error.eventTime)}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ formatTime(error.eventTime) }}</span>
                             </div>
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
-                                ${error.errorType || error.status || 'Error'}
+                                {{ error.errorType || error.status || 'Error' }}
                             </span>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-sm pl-6">
                             <div>
                                 <span class="text-slate-500 dark:text-slate-400">User:</span>
-                                <span class="font-medium text-slate-700 dark:text-slate-300 ml-1 truncate inline-block max-w-[100px]">${error.userId || '-'}</span>
+                                <span class="font-medium text-slate-700 dark:text-slate-300 ml-1 truncate inline-block max-w-[100px]">{{ error.userId || '-' }}</span>
                             </div>
                             <div>
                                 <span class="text-slate-500 dark:text-slate-400">Model:</span>
-                                <span class="text-slate-700 dark:text-slate-300 ml-1">${error.model || '-'}</span>
+                                <span class="text-slate-700 dark:text-slate-300 ml-1">{{ error.model || '-' }}</span>
                             </div>
                             <div>
                                 <span class="text-slate-500 dark:text-slate-400">Latency:</span>
-                                <span class="text-slate-700 dark:text-slate-300 ml-1">${error.latencyMs ? error.latencyMs + 'ms' : '-'}</span>
+                                <span class="text-slate-700 dark:text-slate-300 ml-1">{{ error.latencyMs ? error.latencyMs + 'ms' : '-' }}</span>
                             </div>
                         </div>
-                        ${isExpanded ? getDetailsHTML(error) : ''}
+                        <!-- Expanded Details -->
+                        <div v-if="expandedRows.has(index)" class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 mt-2 bg-slate-50/50 dark:bg-slate-800/30 text-sm rounded-lg">
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Trace ID</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.traceId || '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Anthropic Request ID</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.anthropicRequestId || '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Message ID</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.messageId || '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Key Alias</span>
+                                <span class="text-slate-700 dark:text-slate-300">{{ error.keyAlias || '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Input Tokens</span>
+                                <span class="text-slate-700 dark:text-slate-300">{{ formatNumber(error.inputTokens) }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Output Tokens</span>
+                                <span class="text-slate-700 dark:text-slate-300">{{ formatNumber(error.outputTokens) }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Stream</span>
+                                <span class="text-slate-700 dark:text-slate-300">{{ error.stream ? 'Yes' : 'No' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Batch ID</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.batchId || '-' }}</span>
+                            </div>
+                        </div>
                     </div>
-                `;
-            }).join('');
+                </div>
 
-            // Desktop view
-            desktopList.innerHTML = errorsData.map((error, index) => {
-                const isExpanded = expandedRows.has(index);
-                return `
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="toggleRow(${index})">
-                        <td class="px-4 py-3">
-                            <svg class="w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${formatTime(error.eventTime)}</td>
-                        <td class="px-4 py-3">
-                            <a href="/dashboard/users/${encodeURIComponent(error.userId || '')}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium" onclick="event.stopPropagation()">
-                                ${error.userId || '-'}
-                            </a>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
-                                ${error.errorType || 'Unknown'}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${error.model || '-'}</td>
-                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${error.status || '-'}</td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">${error.latencyMs ? error.latencyMs.toLocaleString() + 'ms' : '-'}</td>
-                    </tr>
-                    ${isExpanded ? `<tr><td colspan="7" class="p-0">${getDetailsHTML(error)}</td></tr>` : ''}
-                `;
-            }).join('');
-        }
+                <!-- Desktop Table View -->
+                <div class="hidden lg:block overflow-x-auto">
+                    <table class="w-full min-w-[1000px]">
+                        <thead class="bg-slate-50/50 dark:bg-slate-800/30">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-8"></th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">User</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Error Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Model</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Latency</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                            <template v-for="(error, index) in errors" :key="index">
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer" @click="toggleRow(index)">
+                                    <td class="px-4 py-3">
+                                        <svg class="w-4 h-4 text-slate-400 transition-transform" :class="{ 'rotate-90': expandedRows.has(index) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ formatTime(error.eventTime) }}</td>
+                                    <td class="px-4 py-3">
+                                        <a :href="'/dashboard/users/' + encodeURIComponent(error.userId || '')" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium" @click.stop>
+                                            {{ error.userId || '-' }}
+                                        </a>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
+                                            {{ error.errorType || 'Unknown' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ error.model || '-' }}</td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ error.status || '-' }}</td>
+                                    <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">{{ error.latencyMs ? formatNumber(error.latencyMs) + 'ms' : '-' }}</td>
+                                </tr>
+                                <tr v-if="expandedRows.has(index)">
+                                    <td colspan="7" class="p-0">
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50/50 dark:bg-slate-800/30 text-sm">
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Trace ID</span>
+                                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.traceId || '-' }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Anthropic Request ID</span>
+                                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.anthropicRequestId || '-' }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Message ID</span>
+                                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.messageId || '-' }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Key Alias</span>
+                                                <span class="text-slate-700 dark:text-slate-300">{{ error.keyAlias || '-' }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Input Tokens</span>
+                                                <span class="text-slate-700 dark:text-slate-300">{{ formatNumber(error.inputTokens) }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Output Tokens</span>
+                                                <span class="text-slate-700 dark:text-slate-300">{{ formatNumber(error.outputTokens) }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Stream</span>
+                                                <span class="text-slate-700 dark:text-slate-300">{{ error.stream ? 'Yes' : 'No' }}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-slate-500 dark:text-slate-400 block text-xs mb-1">Batch ID</span>
+                                                <span class="font-mono text-slate-700 dark:text-slate-300 break-all text-xs">{{ error.batchId || '-' }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+    </div>
 
-        // Refresh errors
-        async function refreshErrors() {
-            document.getElementById('loadingState').classList.remove('hidden');
-            document.getElementById('errorTable').classList.add('hidden');
-            document.getElementById('emptyState').classList.add('hidden');
+    <style>
+        [v-cloak] { display: none; }
+    </style>
 
-            errorsData = await fetchErrors();
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
 
-            document.getElementById('loadingState').classList.add('hidden');
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const errors = ref([]);
+                const expandedRows = ref(new Set());
+                const summary = reactive({
+                    totalErrors: 0,
+                    errorTypes: 0,
+                    affectedUsers: 0,
+                    affectedModels: 0
+                });
 
-            if (errorsData.length === 0) {
-                document.getElementById('emptyState').classList.remove('hidden');
-                // Reset summary cards to 0
-                document.getElementById('totalErrorsCount').textContent = '0';
-                document.getElementById('errorTypesCount').textContent = '0';
-                document.getElementById('affectedUsersCount').textContent = '0';
-                document.getElementById('affectedModelsCount').textContent = '0';
-            } else {
-                document.getElementById('errorTable').classList.remove('hidden');
-                document.getElementById('errorCountBadge').textContent = errorsData.length + ' errors';
-                updateSummaryCards(errorsData);
-                renderErrors();
+                const formatTime = (isoString) => {
+                    if (!isoString) return '-';
+                    return dayjs(isoString).format('YYYY-MM-DD HH:mm:ss');
+                };
+
+                const formatNumber = (num) => {
+                    if (num == null) return '0';
+                    return num.toLocaleString();
+                };
+
+                const toggleRow = (index) => {
+                    if (expandedRows.value.has(index)) {
+                        expandedRows.value.delete(index);
+                    } else {
+                        expandedRows.value.add(index);
+                    }
+                    // Trigger reactivity
+                    expandedRows.value = new Set(expandedRows.value);
+                };
+
+                const updateSummary = (errorList) => {
+                    summary.totalErrors = errorList.length;
+                    summary.errorTypes = new Set(errorList.map(e => e.errorType).filter(Boolean)).size;
+                    summary.affectedUsers = new Set(errorList.map(e => e.userId).filter(Boolean)).size;
+                    summary.affectedModels = new Set(errorList.map(e => e.model).filter(Boolean)).size;
+                };
+
+                const fetchData = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch('/api/v1/errors?limit=20');
+                        if (!response.ok) throw new Error('Failed to fetch errors');
+                        const data = await response.json();
+                        errors.value = data.errors || [];
+                        updateSummary(errors.value);
+                    } catch (error) {
+                        console.error('Error fetching errors:', error);
+                        errors.value = [];
+                        updateSummary([]);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                onMounted(fetchData);
+
+                return {
+                    loading,
+                    errors,
+                    expandedRows,
+                    summary,
+                    formatTime,
+                    formatNumber,
+                    toggleRow,
+                    fetchData
+                };
             }
-        }
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', refreshErrors);
+        }).mount('#errors-app');
     </script>
 </div>
 </body>

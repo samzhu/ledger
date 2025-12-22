@@ -3,455 +3,375 @@
       th:replace="~{layout/main :: html(content=~{::content})}">
 <body>
 <div th:fragment="content">
-    <!-- Breadcrumb & Title -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-            <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">
-                <a th:href="@{/dashboard/models}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Models</a>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-                <span th:text="${modelName}" class="text-slate-700 dark:text-slate-300 truncate max-w-[150px] sm:max-w-none">model-name</span>
-            </nav>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white break-all" th:text="${modelName}">Model Detail</h1>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=7)}"
-               th:class="${days == 7} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">7 Days</a>
-            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=14)}"
-               th:class="${days == 14} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">14 Days</a>
-            <a th:href="@{/dashboard/models/{name}(name=${modelName}, days=30)}"
-               th:class="${days == 30} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">30 Days</a>
-        </div>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <!-- Total Requests -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Requests</p>
-                <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+    <div id="model-detail-app" v-cloak>
+        <!-- Breadcrumb & Title -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+                <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">
+                    <a href="/dashboard/models" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Models</a>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
-                </div>
+                    <span class="text-slate-700 dark:text-slate-300 truncate max-w-[150px] sm:max-w-none">{{ modelName }}</span>
+                </nav>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white break-all">{{ modelName }}</h1>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${#numbers.formatInteger(totalRequests, 0, 'COMMA')}">0</p>
-            <p class="text-xs mt-1">
-                <span th:class="${successRate >= 95} ? 'text-emerald-600 dark:text-emerald-400' : (${successRate >= 90} ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400')"
-                      th:text="${#numbers.formatDecimal(successRate, 1, 1) + '% success'}">98.5% success</span>
-            </p>
-        </div>
-
-        <!-- Total Tokens -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Tokens</p>
-                <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${#numbers.formatInteger(totalTokens, 0, 'COMMA')}">0</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 hidden sm:block"
-               th:text="'In: ' + ${#numbers.formatInteger(totalInputTokens, 0, 'COMMA')} + ' | Out: ' + ${#numbers.formatInteger(totalOutputTokens, 0, 'COMMA')}">In: 0 | Out: 0</p>
-        </div>
-
-        <!-- Estimated Cost -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Cost</p>
-                <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                $<span th:text="${#numbers.formatDecimal(totalCost, 1, 2)}">0.00</span>
-            </p>
-        </div>
-
-        <!-- Unique Users -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Unique Users</p>
-                <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${uniqueUsers}">0</p>
-        </div>
-
-        <!-- Days Active -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group col-span-2 lg:col-span-1">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Days Active</p>
-                <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${usages.size()}">0</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" th:text="'of ' + ${days} + ' days'">of 7 days</p>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-        <!-- Token Usage Trend -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Token Usage Trend</h3>
-            <div class="relative h-48 sm:h-[200px]">
-                <canvas id="tokenChart"></canvas>
+            <div class="flex flex-wrap gap-2">
+                <button v-for="d in [7, 14, 30]" :key="d"
+                    @click="changeDays(d)"
+                    :class="days === d ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
+                    class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                    {{ d }} Days
+                </button>
             </div>
         </div>
 
-        <!-- Request Trend -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Request Trend</h3>
-            <div class="relative h-48 sm:h-[200px]">
-                <canvas id="requestChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Latency & Hourly Row -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-        <!-- Latency Analysis -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Latency Analysis</h3>
-            <div class="grid grid-cols-4 gap-2 sm:gap-3 mb-4">
-                <div class="text-center p-2 sm:p-3 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">P50</p>
-                    <p class="text-sm sm:text-lg font-semibold text-slate-800 dark:text-white" id="p50Value">-</p>
-                </div>
-                <div class="text-center p-2 sm:p-3 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">P90</p>
-                    <p class="text-sm sm:text-lg font-semibold text-slate-800 dark:text-white" id="p90Value">-</p>
-                </div>
-                <div class="text-center p-2 sm:p-3 bg-amber-50/50 dark:bg-amber-500/10 rounded-xl">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">P95</p>
-                    <p class="text-sm sm:text-lg font-semibold text-amber-600 dark:text-amber-400" id="p95Value">-</p>
-                </div>
-                <div class="text-center p-2 sm:p-3 bg-red-50/50 dark:bg-red-500/10 rounded-xl">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">P99</p>
-                    <p class="text-sm sm:text-lg font-semibold text-red-600 dark:text-red-400" id="p99Value">-</p>
-                </div>
-            </div>
-            <div class="relative h-24 sm:h-[100px]">
-                <canvas id="latencyChart"></canvas>
-            </div>
+        <!-- Loading State -->
+        <div v-if="loading" class="glass-card rounded-2xl p-8 text-center">
+            <div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-slate-500 dark:text-slate-400">Loading model data...</p>
         </div>
 
-        <!-- Cache Efficiency -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Cache Efficiency</h3>
-            <div class="text-center mb-4">
-                <div class="relative inline-flex items-center justify-center">
-                    <svg class="w-16 h-16 sm:w-20 sm:h-20 transform -rotate-90">
-                        <circle cx="50%" cy="50%" r="40%" class="stroke-slate-200 dark:stroke-slate-700" stroke-width="6" fill="none"/>
-                        <circle id="cacheCircle" cx="50%" cy="50%" r="40%" stroke="url(#gradientCache)" stroke-width="6" fill="none"
-                                stroke-linecap="round" class="drop-shadow-lg" style="stroke-dasharray: 201; stroke-dashoffset: 201"/>
-                        <defs>
-                            <linearGradient id="gradientCache" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#10b981"/>
-                                <stop offset="100%" stop-color="#34d399"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <span id="cacheHitRate" class="absolute text-base sm:text-lg font-bold text-slate-800 dark:text-white">0%</span>
-                </div>
-                <p class="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Hit Rate</p>
-            </div>
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-slate-500 dark:text-slate-400">Tokens Saved</span>
-                    <span id="tokensSaved" class="font-medium text-slate-800 dark:text-white">0</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500 dark:text-slate-400">Cost Saved</span>
-                    <span id="costSaved" class="font-medium text-emerald-600 dark:text-emerald-400">$0.00</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hourly Distribution -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6 md:col-span-2 lg:col-span-1">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Hourly Pattern (Last Day)</h3>
-            <div class="relative h-36 sm:h-[180px]">
-                <canvas id="hourlyChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Daily Details Table -->
-    <div class="glass-card rounded-2xl overflow-hidden">
-        <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Daily Details</h3>
-        </div>
-
-        <!-- Mobile Card View -->
-        <div class="lg:hidden divide-y divide-slate-200/50 dark:divide-slate-700/50">
-            <div th:each="usage : ${usages}" class="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-medium text-slate-800 dark:text-white" th:text="${usage.date()}">-</span>
-                    <span class="text-sm text-emerald-600 dark:text-emerald-400 font-medium">$<span th:text="${#numbers.formatDecimal(usage.estimatedCostUsd(), 1, 2)}">0.00</span></span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400">Requests:</span>
-                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${#numbers.formatInteger(usage.requestCount(), 0, 'COMMA')}">0</span>
+        <template v-else>
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+                <!-- Total Requests -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Requests</p>
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400">Users:</span>
-                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${usage.uniqueUsers()}">0</span>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ formatNumber(summary.totalRequests) }}</p>
+                    <p class="text-xs mt-1">
+                        <span :class="getSuccessRateClass(summary.successRate)">{{ formatDecimal(summary.successRate, 1) }}% success</span>
+                    </p>
+                </div>
+
+                <!-- Total Tokens -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Tokens</p>
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400">Success:</span>
-                        <span th:class="${usage.requestCount() > 0 && (usage.successCount() * 100.0 / usage.requestCount()) >= 95} ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'"
-                              th:text="${usage.requestCount() > 0} ? ${#numbers.formatDecimal(usage.successCount() * 100.0 / usage.requestCount(), 1, 1) + '%'} : '-'">-</span>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ formatNumber(summary.totalTokens) }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 hidden sm:block">In: {{ formatNumber(summary.totalInputTokens) }} | Out: {{ formatNumber(summary.totalOutputTokens) }}</p>
+                </div>
+
+                <!-- Estimated Cost -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Cost</p>
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-slate-500 dark:text-slate-400">Tokens:</span>
-                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${#numbers.formatInteger(usage.totalTokens(), 0, 'COMMA')}">0</span>
+                    <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">${{ formatDecimal(summary.totalCost) }}</p>
+                </div>
+
+                <!-- Unique Users -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Unique Users</p>
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ summary.uniqueUsers }}</p>
+                </div>
+
+                <!-- Days Active -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group col-span-2 lg:col-span-1">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Days Active</p>
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ usages.length }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">of {{ days }} days</p>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                <div class="glass-card rounded-2xl p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Token Usage Trend</h3>
+                    <div class="relative h-48 sm:h-[200px]">
+                        <canvas id="tokenChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">Request Trend</h3>
+                    <div class="relative h-48 sm:h-[200px]">
+                        <canvas id="requestChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div th:if="${usages.isEmpty()}" class="p-8 text-center">
-                <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                </div>
-                <p class="text-slate-500 dark:text-slate-400 text-sm">No usage data for this period</p>
-            </div>
-        </div>
 
-        <!-- Desktop Table View -->
-        <div class="hidden lg:block overflow-x-auto">
-            <table class="w-full min-w-[900px]">
-                <thead class="bg-slate-50/50 dark:bg-slate-800/30">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Date</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Requests</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Success</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Input</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Output</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Total</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Users</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Avg Latency</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Cost</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200/50 dark:divide-slate-700/50">
-                    <tr th:each="usage : ${usages}" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td class="px-4 py-3 text-sm text-slate-800 dark:text-white" th:text="${usage.date()}">-</td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300" th:text="${#numbers.formatInteger(usage.requestCount(), 0, 'COMMA')}">0</td>
-                        <td class="px-4 py-3 text-sm text-right">
-                            <span th:class="${usage.requestCount() > 0 && (usage.successCount() * 100.0 / usage.requestCount()) >= 95} ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'"
-                                  th:text="${usage.requestCount() > 0} ? ${#numbers.formatDecimal(usage.successCount() * 100.0 / usage.requestCount(), 1, 1) + '%'} : '-'">-</span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300" th:text="${#numbers.formatInteger(usage.totalInputTokens(), 0, 'COMMA')}">0</td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300" th:text="${#numbers.formatInteger(usage.totalOutputTokens(), 0, 'COMMA')}">0</td>
-                        <td class="px-4 py-3 text-sm text-right font-medium text-slate-800 dark:text-white" th:text="${#numbers.formatInteger(usage.totalTokens(), 0, 'COMMA')}">0</td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300" th:text="${usage.uniqueUsers()}">0</td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300"
-                            th:text="${usage.latencyStats() != null} ? ${#numbers.formatDecimal(usage.latencyStats().avgLatencyMs(), 0, 0) + 'ms'} : '-'">-</td>
-                        <td class="px-4 py-3 text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                            $<span th:text="${#numbers.formatDecimal(usage.estimatedCostUsd(), 1, 2)}">0.00</span>
-                        </td>
-                    </tr>
-                    <tr th:if="${usages.isEmpty()}">
-                        <td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                            No usage data for this period
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <!-- Daily Details Table -->
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Daily Details</h3>
+                </div>
+
+                <!-- Mobile Card View -->
+                <div class="lg:hidden divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                    <div v-for="usage in usages" :key="usage.date" class="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-slate-800 dark:text-white">{{ usage.date }}</span>
+                            <span class="text-sm text-emerald-600 dark:text-emerald-400 font-medium">${{ formatDecimal(usage.estimatedCostUsd) }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Requests:</span>
+                                <span class="font-medium text-slate-800 dark:text-white ml-1">{{ formatNumber(usage.requestCount) }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Users:</span>
+                                <span class="font-medium text-slate-800 dark:text-white ml-1">{{ usage.uniqueUsers }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Success:</span>
+                                <span :class="getSuccessRateClass(calcSuccessRate(usage))">{{ formatDecimal(calcSuccessRate(usage), 1) }}%</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Tokens:</span>
+                                <span class="font-medium text-slate-800 dark:text-white ml-1">{{ formatNumber(usage.totalTokens) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="usages.length === 0" class="p-8 text-center">
+                        <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                        </div>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm">No usage data for this period</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Table View -->
+                <div class="hidden lg:block overflow-x-auto">
+                    <table class="w-full min-w-[900px]">
+                        <thead class="bg-slate-50/50 dark:bg-slate-800/30">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Date</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Requests</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Success</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Input</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Output</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Total</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Users</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                            <tr v-for="usage in usages" :key="usage.date" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td class="px-4 py-3 text-sm text-slate-800 dark:text-white">{{ usage.date }}</td>
+                                <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">{{ formatNumber(usage.requestCount) }}</td>
+                                <td class="px-4 py-3 text-sm text-right">
+                                    <span :class="getSuccessRateClass(calcSuccessRate(usage))">{{ formatDecimal(calcSuccessRate(usage), 1) }}%</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">{{ formatNumber(usage.totalInputTokens) }}</td>
+                                <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">{{ formatNumber(usage.totalOutputTokens) }}</td>
+                                <td class="px-4 py-3 text-sm text-right font-medium text-slate-800 dark:text-white">{{ formatNumber(usage.totalTokens) }}</td>
+                                <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-300">{{ usage.uniqueUsers }}</td>
+                                <td class="px-4 py-3 text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">${{ formatDecimal(usage.estimatedCostUsd) }}</td>
+                            </tr>
+                            <tr v-if="usages.length === 0">
+                                <td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No usage data for this period</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
     </div>
 
-    <!-- Chart.js -->
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+
     <script th:inline="javascript">
-        const usages = /*[[${usages}]]*/ [];
-        const sortedUsages = [...usages].sort((a, b) => a.date.localeCompare(b.date));
-        const labels = sortedUsages.map(u => u.date);
-        const lastUsage = sortedUsages.length > 0 ? sortedUsages[sortedUsages.length - 1] : null;
+        const MODEL_NAME = /*[[${modelName}]]*/ '';
+    </script>
+    <script>
+        const { createApp, ref, reactive, onMounted, nextTick } = Vue;
 
-        // Dark mode detection
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isDark ? '#94a3b8' : '#64748b';
-        const gridColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const modelName = ref(MODEL_NAME);
+                const days = ref(7);
+                const usages = ref([]);
+                let tokenChartInstance = null;
+                let requestChartInstance = null;
 
-        // Token Chart (Stacked Bar)
-        new Chart(document.getElementById('tokenChart'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Input',
-                        data: sortedUsages.map(u => u.totalInputTokens),
-                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                        borderWidth: 0,
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Output',
-                        data: sortedUsages.map(u => u.totalOutputTokens),
-                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                        borderWidth: 0,
-                        borderRadius: 4
+                const summary = reactive({
+                    totalRequests: 0,
+                    totalSuccess: 0,
+                    successRate: 0,
+                    totalInputTokens: 0,
+                    totalOutputTokens: 0,
+                    totalTokens: 0,
+                    totalCost: 0,
+                    uniqueUsers: 0
+                });
+
+                const formatNumber = (num) => {
+                    if (num == null) return '0';
+                    return Math.round(num).toLocaleString();
+                };
+
+                const formatDecimal = (num, decimals = 2) => {
+                    if (num == null) return '0.00';
+                    return Number(num).toFixed(decimals);
+                };
+
+                const getSuccessRateClass = (rate) => {
+                    if (rate >= 95) return 'text-emerald-600 dark:text-emerald-400';
+                    if (rate >= 90) return 'text-amber-600 dark:text-amber-400';
+                    return 'text-red-600 dark:text-red-400';
+                };
+
+                const calcSuccessRate = (usage) => {
+                    return usage.requestCount > 0 ? (usage.successCount / usage.requestCount * 100) : 0;
+                };
+
+                const updateSummary = (usageList) => {
+                    summary.totalRequests = usageList.reduce((sum, u) => sum + (u.requestCount || 0), 0);
+                    summary.totalSuccess = usageList.reduce((sum, u) => sum + (u.successCount || 0), 0);
+                    summary.successRate = summary.totalRequests > 0 ? (summary.totalSuccess / summary.totalRequests * 100) : 0;
+                    summary.totalInputTokens = usageList.reduce((sum, u) => sum + (u.totalInputTokens || 0), 0);
+                    summary.totalOutputTokens = usageList.reduce((sum, u) => sum + (u.totalOutputTokens || 0), 0);
+                    summary.totalTokens = usageList.reduce((sum, u) => sum + (u.totalTokens || 0), 0);
+                    summary.totalCost = usageList.reduce((sum, u) => sum + (Number(u.estimatedCostUsd) || 0), 0);
+                    summary.uniqueUsers = Math.max(...usageList.map(u => u.uniqueUsers || 0), 0);
+                };
+
+                const renderCharts = () => {
+                    if (usages.value.length === 0) return;
+
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const textColor = isDark ? '#94a3b8' : '#64748b';
+                    const gridColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                    const sortedUsages = [...usages.value].sort((a, b) => a.date.localeCompare(b.date));
+                    const labels = sortedUsages.map(u => u.date);
+
+                    // Token Chart
+                    const tokenCanvas = document.getElementById('tokenChart');
+                    if (tokenCanvas) {
+                        if (tokenChartInstance) tokenChartInstance.destroy();
+                        tokenChartInstance = new Chart(tokenCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [
+                                    { label: 'Input', data: sortedUsages.map(u => u.totalInputTokens), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderWidth: 0, borderRadius: 4 },
+                                    { label: 'Output', data: sortedUsages.map(u => u.totalOutputTokens), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderWidth: 0, borderRadius: 4 }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'top', labels: { color: textColor } } },
+                                scales: {
+                                    y: { beginAtZero: true, stacked: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                                    x: { stacked: true, ticks: { color: textColor }, grid: { color: gridColor } }
+                                }
+                            }
+                        });
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'top', labels: { color: textColor } } },
-                scales: {
-                    y: { beginAtZero: true, stacked: true, ticks: { color: textColor }, grid: { color: gridColor } },
-                    x: { stacked: true, ticks: { color: textColor }, grid: { color: gridColor } }
-                }
-            }
-        });
 
-        // Request Chart
-        const successRateData = sortedUsages.map(u =>
-            u.requestCount > 0 ? (u.successCount / u.requestCount * 100) : 100
-        );
-        new Chart(document.getElementById('requestChart'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Requests',
-                        data: sortedUsages.map(u => u.requestCount),
-                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                        borderWidth: 0,
-                        borderRadius: 4,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Success Rate',
-                        data: successRateData,
-                        type: 'line',
-                        borderColor: 'rgb(16, 185, 129)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        yAxisID: 'y1'
+                    // Request Chart
+                    const requestCanvas = document.getElementById('requestChart');
+                    if (requestCanvas) {
+                        if (requestChartInstance) requestChartInstance.destroy();
+                        const successRateData = sortedUsages.map(u => u.requestCount > 0 ? (u.successCount / u.requestCount * 100) : 100);
+                        requestChartInstance = new Chart(requestCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [
+                                    { label: 'Requests', data: sortedUsages.map(u => u.requestCount), backgroundColor: 'rgba(99, 102, 241, 0.5)', borderWidth: 0, borderRadius: 4, yAxisID: 'y' },
+                                    { label: 'Success Rate', data: successRateData, type: 'line', borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, yAxisID: 'y1' }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'top', labels: { color: textColor } } },
+                                scales: {
+                                    y: { beginAtZero: true, position: 'left', ticks: { color: textColor }, grid: { color: gridColor } },
+                                    y1: { beginAtZero: true, max: 100, position: 'right', ticks: { color: textColor }, grid: { drawOnChartArea: false } },
+                                    x: { ticks: { color: textColor }, grid: { color: gridColor } }
+                                }
+                            }
+                        });
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'top', labels: { color: textColor } } },
-                scales: {
-                    y: { beginAtZero: true, position: 'left', ticks: { color: textColor }, grid: { color: gridColor } },
-                    y1: { beginAtZero: true, max: 100, position: 'right', ticks: { color: textColor }, grid: { drawOnChartArea: false } },
-                    x: { ticks: { color: textColor }, grid: { color: gridColor } }
-                }
-            }
-        });
+                };
 
-        // Latency Values & Chart
-        if (lastUsage && lastUsage.latencyStats) {
-            const ls = lastUsage.latencyStats;
-            document.getElementById('p50Value').textContent = Math.round(ls.p50Ms) + 'ms';
-            document.getElementById('p90Value').textContent = Math.round(ls.p90Ms) + 'ms';
-            document.getElementById('p95Value').textContent = Math.round(ls.p95Ms) + 'ms';
-            document.getElementById('p99Value').textContent = Math.round(ls.p99Ms) + 'ms';
-
-            new Chart(document.getElementById('latencyChart'), {
-                type: 'line',
-                data: {
-                    labels: sortedUsages.map(u => u.date),
-                    datasets: [{
-                        label: 'P50',
-                        data: sortedUsages.map(u => u.latencyStats?.p50Ms || 0),
-                        borderColor: 'rgb(99, 102, 241)',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }, {
-                        label: 'P99',
-                        data: sortedUsages.map(u => u.latencyStats?.p99Ms || 0),
-                        borderColor: 'rgb(239, 68, 68)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor } } },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
-                        x: { ticks: { color: textColor }, grid: { color: gridColor } }
+                const fetchData = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`/api/v1/dashboard/models/${encodeURIComponent(modelName.value)}?days=${days.value}`);
+                        if (!response.ok) throw new Error('Failed to fetch model data');
+                        const data = await response.json();
+                        usages.value = data.usages || [];
+                        updateSummary(usages.value);
+                        await nextTick();
+                        renderCharts();
+                    } catch (error) {
+                        console.error('Error fetching model data:', error);
+                        usages.value = [];
+                        updateSummary([]);
+                    } finally {
+                        loading.value = false;
                     }
-                }
-            });
-        }
+                };
 
-        // Cache Efficiency
-        if (lastUsage && lastUsage.cacheEfficiency) {
-            const ce = lastUsage.cacheEfficiency;
-            const hitRate = Math.round(ce.hitRate * 100);
-            document.getElementById('cacheHitRate').textContent = hitRate + '%';
-            document.getElementById('cacheCircle').style.strokeDashoffset = 201 - (201 * hitRate / 100);
-            document.getElementById('tokensSaved').textContent = ce.tokensSaved.toLocaleString();
-            document.getElementById('costSaved').textContent = '$' + (ce.costSaved || 0).toFixed(2);
-        }
+                const changeDays = (d) => {
+                    days.value = d;
+                    fetchData();
+                };
 
-        // Hourly Distribution
-        const hourlyData = new Array(24).fill(0);
-        if (lastUsage && lastUsage.hourlyRequestCount) {
-            Object.entries(lastUsage.hourlyRequestCount).forEach(([hour, count]) => {
-                hourlyData[parseInt(hour)] = count;
-            });
-        }
-        const peakHour = lastUsage ? lastUsage.peakHour : -1;
+                onMounted(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const urlDays = parseInt(urlParams.get('days'));
+                    if (urlDays && [7, 14, 30].includes(urlDays)) {
+                        days.value = urlDays;
+                    }
+                    fetchData();
+                });
 
-        new Chart(document.getElementById('hourlyChart'), {
-            type: 'bar',
-            data: {
-                labels: Array.from({length: 24}, (_, i) => i + ':00'),
-                datasets: [{
-                    label: 'Requests',
-                    data: hourlyData,
-                    backgroundColor: hourlyData.map((_, i) =>
-                        i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'
-                    ),
-                    borderWidth: 0,
-                    borderRadius: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
-                    x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } }
-                }
+                return {
+                    loading,
+                    modelName,
+                    days,
+                    usages,
+                    summary,
+                    formatNumber,
+                    formatDecimal,
+                    getSuccessRateClass,
+                    calcSuccessRate,
+                    changeDays
+                };
             }
-        });
+        }).mount('#model-detail-app');
     </script>
 </div>
 </body>

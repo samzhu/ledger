@@ -3,567 +3,544 @@
       th:replace="~{layout/main :: html(content=~{::content})}">
 <body>
 <div th:fragment="content">
-    <!-- Date Range Selection -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
-            <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <span th:text="${startDate} + ' ~ ' + ${endDate}">2025-12-01 ~ 2025-12-07</span>
+    <div id="overview-app" v-cloak>
+        <!-- Date Range Selection -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-4">
+                <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span>{{ startDate }} ~ {{ endDate }}</span>
+                </div>
+                <button @click="triggerProcess"
+                    :disabled="processing"
+                    :class="processStatus === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : (processStatus === 'error' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border hover:opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" :class="{ 'animate-spin': processing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>{{ processButtonText }}</span>
+                </button>
             </div>
-            <!-- Process Button -->
-            <button id="processBtn"
-                    onclick="triggerProcess()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                           bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20
-                           hover:bg-amber-500/20 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span id="processBtnText">Run Process</span>
-            </button>
+            <div class="flex flex-wrap gap-2">
+                <button v-for="d in [7, 14, 30]" :key="d"
+                    @click="changeDays(d)"
+                    :class="days === d ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
+                    class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">
+                    {{ d }} Days
+                </button>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-            <a th:href="@{/dashboard(days=7)}"
-               th:class="${days == 7} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">
-                7 Days
-            </a>
-            <a th:href="@{/dashboard(days=14)}"
-               th:class="${days == 14} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">
-                14 Days
-            </a>
-            <a th:href="@{/dashboard(days=30)}"
-               th:class="${days == 30} ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25' : 'glass-card text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80'"
-               class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all">
-                30 Days
-            </a>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="glass-card rounded-2xl p-8 text-center">
+            <div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-slate-500 dark:text-slate-400">Loading overview data...</p>
         </div>
+
+        <template v-else>
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
+                <!-- Total Requests -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Requests</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ formatNumber(summary.totalRequests) }}</p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <span :class="getSuccessRateBadgeClass(summary.lastDaySuccessRate)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                            {{ formatDecimal(summary.lastDaySuccessRate, 1) }}%
+                            <span class="ml-1 hidden sm:inline">success</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Total Tokens -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Tokens</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ formatNumber(summary.totalTokens) }}</p>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                        <span>In: {{ formatNumber(summary.totalInputTokens) }}</span>
+                        <span class="mx-1 text-slate-300 dark:text-slate-600">|</span>
+                        <span>Out: {{ formatNumber(summary.totalOutputTokens) }}</span>
+                    </div>
+                </div>
+
+                <!-- Estimated Cost -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Estimated Cost</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">${{ formatDecimal(summary.totalCost) }}</p>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                        <span>Avg: ${{ formatDecimal(summary.avgDailyCost) }}/day</span>
+                    </div>
+                </div>
+
+                <!-- Unique Users -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Unique Users</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{{ topUsers.length }}</p>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                        <span>Active in period</span>
+                    </div>
+                </div>
+
+                <!-- Average Latency -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Avg Latency</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
+                        <span>{{ formatNumber(summary.avgLatency) }}</span>
+                        <span class="text-sm font-normal text-slate-500 dark:text-slate-400">ms</span>
+                    </p>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                        <span>P50: {{ formatNumber(summary.p50Latency) }}ms</span>
+                        <span class="mx-1 text-slate-300 dark:text-slate-600">|</span>
+                        <span>P90: {{ formatNumber(summary.p90Latency) }}ms</span>
+                    </div>
+                </div>
+
+                <!-- Cache Savings -->
+                <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Cache Savings</p>
+                        <div class="w-9 h-9 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/25 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-bold text-pink-600 dark:text-pink-400">${{ formatDecimal(summary.cacheSavings) }}</p>
+                    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                        <span>Hit Rate: {{ formatDecimal(summary.cacheHitRate * 100, 1) }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Health & Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+                <!-- System Health -->
+                <div class="glass-card rounded-2xl p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">System Health</h3>
+                    <!-- Success Rate -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-slate-600 dark:text-slate-400">Success Rate</span>
+                            <span :class="getSuccessRateTextClass(summary.lastDaySuccessRate)" class="text-sm font-medium">
+                                {{ formatDecimal(summary.lastDaySuccessRate, 1) }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                            <div :class="getSuccessRateBarClass(summary.lastDaySuccessRate)"
+                                 class="h-2.5 rounded-full transition-all duration-500"
+                                 :style="{ width: summary.lastDaySuccessRate + '%' }"></div>
+                        </div>
+                    </div>
+                    <!-- Cache Hit Rate -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-slate-600 dark:text-slate-400">Cache Hit Rate</span>
+                            <span class="text-sm font-medium text-cyan-600 dark:text-cyan-400">{{ formatDecimal(summary.cacheHitRate * 100, 1) }}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                            <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2.5 rounded-full transition-all duration-500"
+                                 :style="{ width: (summary.cacheHitRate * 100) + '%' }"></div>
+                        </div>
+                    </div>
+                    <!-- Latency Percentiles -->
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Latency Percentiles</h4>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">P50</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ formatNumber(summary.p50Latency) }}ms</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">P90</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ formatNumber(summary.p90Latency) }}ms</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">P99</p>
+                                <p class="text-sm font-semibold text-orange-600 dark:text-orange-400">{{ formatNumber(summary.p99Latency) }}ms</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Avg</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ formatNumber(summary.avgLatency) }}ms</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Usage Trend Chart -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                        <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Daily Usage Trend</h3>
+                        <div class="flex items-center gap-4 text-xs">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 bg-gradient-to-r from-indigo-500 to-violet-500 rounded"></span>
+                                <span class="text-slate-600 dark:text-slate-400">Tokens</span>
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded"></span>
+                                <span class="text-slate-600 dark:text-slate-400">Success Rate</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="relative h-48 sm:h-[200px]">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hourly Distribution -->
+            <div v-if="lastDayStats" class="glass-card rounded-2xl p-4 sm:p-6 mb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Hourly Distribution (Last Day)</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Peak Hour:</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600 dark:text-orange-400">
+                            {{ lastDayStats.peakHour }}:00 ({{ lastDayStats.peakHourRequests }} req)
+                        </span>
+                    </div>
+                </div>
+                <div class="relative h-32 sm:h-[150px]">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Leaderboards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <!-- Top Users -->
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Top Users</h3>
+                            <a href="/dashboard/users" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View All</a>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-slate-100 dark:divide-slate-700/50">
+                        <div v-for="(user, index) in topUsers.slice(0, 10)" :key="user.userId" class="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span :class="getRankClass(index)" class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold">{{ index + 1 }}</span>
+                                <a :href="'/dashboard/users/' + encodeURIComponent(user.userId)" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate" :title="user.userId">{{ user.userId }}</a>
+                            </div>
+                            <span class="text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex-shrink-0">${{ formatDecimal(user.totalEstimatedCostUsd) }}</span>
+                        </div>
+                        <div v-if="topUsers.length === 0" class="text-center text-slate-500 dark:text-slate-400 text-sm py-8">No user data available</div>
+                    </div>
+                </div>
+
+                <!-- Top Models -->
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Top Models</h3>
+                            <a href="/dashboard/models" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View All</a>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-slate-100 dark:divide-slate-700/50">
+                        <div v-for="(model, index) in topModels.slice(0, 10)" :key="model.id" class="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span :class="getModelRankClass(index)" class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold">{{ index + 1 }}</span>
+                                <a :href="'/dashboard/models/' + encodeURIComponent(model.id)" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate" :title="model.id">{{ model.id }}</a>
+                            </div>
+                            <span class="text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex-shrink-0">${{ formatDecimal(model.costUsd) }}</span>
+                        </div>
+                        <div v-if="topModels.length === 0" class="text-center text-slate-500 dark:text-slate-400 text-sm py-8">No model data available</div>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
-    <!-- Statistics Cards (6 cards - responsive grid) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
-        <!-- Total Requests -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Requests</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white"
-               th:text="${#numbers.formatInteger(summaryTotalRequests, 0, 'COMMA')}">0</p>
-            <div class="mt-2 flex items-center gap-1">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                      th:classappend="${lastDayStats == null} ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' : (${lastDaySuccessRate >= 95} ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : (${lastDaySuccessRate >= 90} ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'))">
-                    <span th:if="${lastDayStats != null}" th:text="${#numbers.formatDecimal(lastDaySuccessRate, 1, 1) + '%'}">98.5%</span>
-                    <span th:if="${lastDayStats == null}">N/A</span>
-                    <span class="ml-1 hidden sm:inline">success</span>
-                </span>
-            </div>
-        </div>
+    <style>
+        [v-cloak] { display: none; }
+    </style>
 
-        <!-- Total Tokens -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Total Tokens</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white"
-               th:text="${#numbers.formatInteger(summaryTotalTokens, 0, 'COMMA')}">0</p>
-            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                <span th:text="|In: ${#numbers.formatInteger(summaryTotalInputTokens, 0, 'COMMA')}|">In: 0</span>
-                <span class="mx-1 text-slate-300 dark:text-slate-600">|</span>
-                <span th:text="|Out: ${#numbers.formatInteger(summaryTotalOutputTokens, 0, 'COMMA')}|">Out: 0</span>
-            </div>
-        </div>
-
-        <!-- Estimated Cost -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Estimated Cost</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                $<span th:text="${#numbers.formatDecimal(summaryTotalCost, 1, 2)}">0.00</span>
-            </p>
-            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                <span th:text="|Avg: $${#numbers.formatDecimal(summaryAvgDailyCost, 1, 2)}/day|">Avg: $0.00/day</span>
-            </div>
-        </div>
-
-        <!-- Unique Users -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Unique Users</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white" th:text="${topUsers.size()}">0</p>
-            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                <span>Active in period</span>
-            </div>
-        </div>
-
-        <!-- Average Latency -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Avg Latency</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
-                <span th:text="${#numbers.formatDecimal(summaryAvgLatency, 0, 0)}">0</span>
-                <span class="text-sm font-normal text-slate-500 dark:text-slate-400">ms</span>
-            </p>
-            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                <span th:text="|P50: ${#numbers.formatDecimal(summaryP50Latency, 0, 0)}ms|">P50: 0ms</span>
-                <span class="mx-1 text-slate-300 dark:text-slate-600">|</span>
-                <span th:text="|P90: ${#numbers.formatDecimal(summaryP90Latency, 0, 0)}ms|">P90: 0ms</span>
-            </div>
-        </div>
-
-        <!-- Cache Savings -->
-        <div class="glass-card stat-card rounded-2xl p-4 sm:p-5 group">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">Cache Savings</p>
-                <div class="w-9 h-9 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/25 group-hover:scale-110 transition-transform">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-xl sm:text-2xl font-bold text-pink-600 dark:text-pink-400">
-                $<span th:text="${#numbers.formatDecimal(summaryCacheSavings, 1, 2)}">0.00</span>
-            </p>
-            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                <span th:text="|Hit Rate: ${#numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1)}%|">Hit Rate: 0%</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- System Health & Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-        <!-- System Health -->
-        <div class="glass-card rounded-2xl p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white mb-4">System Health</h3>
-
-            <!-- Success Rate -->
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-slate-600 dark:text-slate-400">Success Rate</span>
-                    <span class="text-sm font-medium"
-                          th:classappend="${lastDayStats == null} ? 'text-slate-500 dark:text-slate-400' : (${lastDaySuccessRate >= 95} ? 'text-emerald-600 dark:text-emerald-400' : (${lastDaySuccessRate >= 90} ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'))">
-                        <span th:if="${lastDayStats != null}" th:text="${#numbers.formatDecimal(lastDaySuccessRate, 1, 1) + '%'}">98.5%</span>
-                        <span th:if="${lastDayStats == null}">N/A</span>
-                    </span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                    <div class="h-2.5 rounded-full transition-all duration-500"
-                         th:classappend="${lastDayStats == null} ? 'bg-slate-400 dark:bg-slate-500' : (${lastDaySuccessRate >= 95} ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : (${lastDaySuccessRate >= 90} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-red-500 to-rose-500'))"
-                         th:style="${lastDayStats == null} ? 'width: 0%' : 'width: ' + ${lastDaySuccessRate} + '%'"></div>
-                </div>
-            </div>
-
-            <!-- Cache Hit Rate -->
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-slate-600 dark:text-slate-400">Cache Hit Rate</span>
-                    <span class="text-sm font-medium text-cyan-600 dark:text-cyan-400"
-                          th:text="${lastDayStats == null ? 'N/A' : #numbers.formatDecimal(summaryAvgCacheHitRate * 100, 1, 1) + '%'}">0%</span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                    <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2.5 rounded-full transition-all duration-500"
-                         th:style="${lastDayStats == null} ? 'width: 0%' : |width: ${summaryAvgCacheHitRate * 100}%|"></div>
-                </div>
-            </div>
-
-            <!-- Latency Percentiles -->
-            <div class="mt-6">
-                <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Latency Percentiles</h4>
-                <div class="grid grid-cols-4 gap-2">
-                    <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                        <p class="text-xs text-slate-500 dark:text-slate-400">P50</p>
-                        <p class="text-sm font-semibold text-slate-800 dark:text-white"
-                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP50Latency, 0, 0) + 'ms'}">0ms</p>
-                    </div>
-                    <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                        <p class="text-xs text-slate-500 dark:text-slate-400">P90</p>
-                        <p class="text-sm font-semibold text-slate-800 dark:text-white"
-                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP90Latency, 0, 0) + 'ms'}">0ms</p>
-                    </div>
-                    <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                        <p class="text-xs text-slate-500 dark:text-slate-400">P99</p>
-                        <p class="text-sm font-semibold text-orange-600 dark:text-orange-400"
-                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryP99Latency, 0, 0) + 'ms'}">0ms</p>
-                    </div>
-                    <div class="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Avg</p>
-                        <p class="text-sm font-semibold text-slate-800 dark:text-white"
-                           th:text="${lastDayStats == null ? '-' : #numbers.formatDecimal(summaryAvgLatency, 0, 0) + 'ms'}">0ms</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Daily Usage Trend Chart -->
-        <div class="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-                <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Daily Usage Trend</h3>
-                <div class="flex items-center gap-4 text-xs">
-                    <span class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 bg-gradient-to-r from-indigo-500 to-violet-500 rounded"></span>
-                        <span class="text-slate-600 dark:text-slate-400">Tokens</span>
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded"></span>
-                        <span class="text-slate-600 dark:text-slate-400">Success Rate</span>
-                    </span>
-                </div>
-            </div>
-            <div class="relative h-48 sm:h-[200px]">
-                <canvas id="dailyChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hourly Distribution -->
-    <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-            <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Hourly Distribution (Last Day)</h3>
-            <div th:if="${lastDayStats != null}" class="flex items-center gap-2">
-                <span class="text-sm text-slate-500 dark:text-slate-400">Peak Hour:</span>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600 dark:text-orange-400"
-                      th:text="${lastDayPeakHour + ':00'} + ' (' + ${lastDayPeakHourRequests} + ' req)'">14:00 (150 req)</span>
-            </div>
-        </div>
-        <div class="relative h-32 sm:h-[150px]">
-            <canvas id="hourlyChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Leaderboards -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <!-- Top Users -->
-        <div class="glass-card rounded-2xl overflow-hidden">
-            <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Top Users</h3>
-                    <a th:href="@{/dashboard/users}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View All</a>
-                </div>
-            </div>
-
-            <!-- Mobile Card View -->
-            <div class="sm:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
-                <div th:each="user, iterStat : ${topUsers}"
-                     th:if="${iterStat.index < 5}"
-                     class="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <span class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold"
-                              th:classappend="${iterStat.index == 0} ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white' : (${iterStat.index == 1} ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' : (${iterStat.index == 2} ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'))"
-                              th:text="${iterStat.index + 1}">1</span>
-                        <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                           class="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate"
-                           th:text="${user.userId}" th:title="${user.userId}">user-id</a>
-                    </div>
-                    <span class="text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex-shrink-0">
-                        $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
-                    </span>
-                </div>
-                <div th:if="${topUsers.isEmpty()}" class="text-center text-slate-500 dark:text-slate-400 text-sm py-8">
-                    No user data available
-                </div>
-            </div>
-
-            <!-- Desktop Table View -->
-            <div class="hidden sm:block">
-                <table class="w-full">
-                    <thead class="bg-slate-50/50 dark:bg-slate-800/50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">User</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Requests</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tokens</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        <tr th:each="user, iterStat : ${topUsers}" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold"
-                                          th:classappend="${iterStat.index == 0} ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white' : (${iterStat.index == 1} ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' : (${iterStat.index == 2} ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'))"
-                                          th:text="${iterStat.index + 1}">1</span>
-                                    <a th:href="@{/dashboard/users/{id}(id=${user.userId})}"
-                                       class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium truncate max-w-[120px]"
-                                       th:text="${user.userId}" th:title="${user.userId}">user-id</a>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-right text-sm text-slate-600 dark:text-slate-300"
-                                th:text="${#numbers.formatInteger(user.totalRequestCount(), 0, 'COMMA')}">0</td>
-                            <td class="px-4 py-3 text-right text-sm text-slate-600 dark:text-slate-300"
-                                th:text="${#numbers.formatInteger(user.totalTokens(), 0, 'COMMA')}">0</td>
-                            <td class="px-4 py-3 text-right text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
-                                $<span th:text="${#numbers.formatDecimal(user.totalEstimatedCostUsd(), 1, 2)}">0.00</span>
-                            </td>
-                        </tr>
-                        <tr th:if="${topUsers.isEmpty()}">
-                            <td colspan="4" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                                No user data available
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Top Models -->
-        <div class="glass-card rounded-2xl overflow-hidden">
-            <div class="px-4 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 dark:from-slate-800/50 to-transparent">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Top Models</h3>
-                    <a th:href="@{/dashboard/models}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View All</a>
-                </div>
-            </div>
-
-            <!-- Mobile Card View -->
-            <div class="sm:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
-                <div th:each="model, iterStat : ${lastDayTopModels}"
-                     th:if="${iterStat.index < 5}"
-                     class="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <span class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold"
-                              th:classappend="${iterStat.index == 0} ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white' : (${iterStat.index == 1} ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' : (${iterStat.index == 2} ? 'bg-gradient-to-br from-indigo-400 to-violet-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'))"
-                              th:text="${iterStat.index + 1}">1</span>
-                        <a th:href="@{/dashboard/models/{id}(id=${model.id()})}"
-                           class="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate"
-                           th:text="${model.id()}" th:title="${model.id()}">model-name</a>
-                    </div>
-                    <span class="text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex-shrink-0">
-                        $<span th:text="${#numbers.formatDecimal(model.costUsd(), 1, 2)}">0.00</span>
-                    </span>
-                </div>
-                <div th:if="${lastDayStats == null || lastDayTopModels == null || lastDayTopModels.isEmpty()}"
-                     class="text-center text-slate-500 dark:text-slate-400 text-sm py-8">
-                    No model data available
-                </div>
-            </div>
-
-            <!-- Desktop Table View -->
-            <div class="hidden sm:block">
-                <table class="w-full">
-                    <thead class="bg-slate-50/50 dark:bg-slate-800/50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Model</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Requests</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tokens</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        <tr th:if="${lastDayStats != null}" th:each="model, iterStat : ${lastDayTopModels}" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold"
-                                          th:classappend="${iterStat.index == 0} ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white' : (${iterStat.index == 1} ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' : (${iterStat.index == 2} ? 'bg-gradient-to-br from-indigo-400 to-violet-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'))"
-                                          th:text="${iterStat.index + 1}">1</span>
-                                    <a th:href="@{/dashboard/models/{id}(id=${model.id()})}"
-                                       class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium truncate max-w-[150px]"
-                                       th:text="${model.id()}" th:title="${model.id()}">model-name</a>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-right text-sm text-slate-600 dark:text-slate-300"
-                                th:text="${#numbers.formatInteger(model.requestCount(), 0, 'COMMA')}">0</td>
-                            <td class="px-4 py-3 text-right text-sm text-slate-600 dark:text-slate-300"
-                                th:text="${#numbers.formatInteger(model.totalTokens(), 0, 'COMMA')}">0</td>
-                            <td class="px-4 py-3 text-right text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
-                                $<span th:text="${#numbers.formatDecimal(model.costUsd(), 1, 2)}">0.00</span>
-                            </td>
-                        </tr>
-                        <tr th:if="${lastDayStats == null || lastDayTopModels == null || lastDayTopModels.isEmpty()}">
-                            <td colspan="4" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                                No model data available
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settlement Function -->
     <script>
-        async function triggerProcess() {
-            const btn = document.getElementById('processBtn');
-            const btnText = document.getElementById('processBtnText');
-            const originalText = btnText.textContent;
+        const { createApp, ref, reactive, onMounted, nextTick } = Vue;
 
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            btnText.textContent = 'Flushing...';
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const days = ref(7);
+                const startDate = ref('');
+                const endDate = ref('');
+                const stats = ref([]);
+                const topUsers = ref([]);
+                const topModels = ref([]);
+                const lastDayStats = ref(null);
+                const processing = ref(false);
+                const processStatus = ref('idle');
+                const processButtonText = ref('Run Process');
+                let dailyChartInstance = null;
+                let hourlyChartInstance = null;
 
-            try {
-                const response = await fetch('/api/v1/usage/process/trigger', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                const summary = reactive({
+                    totalRequests: 0,
+                    totalTokens: 0,
+                    totalInputTokens: 0,
+                    totalOutputTokens: 0,
+                    totalCost: 0,
+                    avgDailyCost: 0,
+                    avgLatency: 0,
+                    p50Latency: 0,
+                    p90Latency: 0,
+                    p99Latency: 0,
+                    cacheSavings: 0,
+                    cacheHitRate: 0,
+                    lastDaySuccessRate: 0
                 });
 
-                if (!response.ok) {
-                    throw new Error('Process failed: ' + response.status);
-                }
+                const formatNumber = (num) => {
+                    if (num == null) return '0';
+                    return Math.round(num).toLocaleString();
+                };
 
-                const result = await response.json();
-                btnText.textContent = result.processedBatches + ' batches';
-                btn.classList.remove('bg-amber-500/10', 'text-amber-600', 'border-amber-500/20');
-                btn.classList.add('bg-emerald-500/10', 'text-emerald-600', 'border-emerald-500/20');
+                const formatDecimal = (num, decimals = 2) => {
+                    if (num == null) return '0.00';
+                    return Number(num).toFixed(decimals);
+                };
 
-                setTimeout(() => { window.location.reload(); }, 1500);
+                const getRankClass = (index) => {
+                    if (index === 0) return 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white';
+                    if (index === 1) return 'bg-gradient-to-br from-slate-300 to-slate-400 text-white';
+                    if (index === 2) return 'bg-gradient-to-br from-orange-400 to-amber-500 text-white';
+                    return 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
+                };
 
-            } catch (error) {
-                console.error('Process error:', error);
-                btnText.textContent = 'Error!';
-                btn.classList.remove('bg-amber-500/10', 'text-amber-600', 'border-amber-500/20');
-                btn.classList.add('bg-red-500/10', 'text-red-600', 'border-red-500/20');
+                const getModelRankClass = (index) => {
+                    if (index === 0) return 'bg-gradient-to-br from-violet-500 to-purple-600 text-white';
+                    if (index === 1) return 'bg-gradient-to-br from-slate-300 to-slate-400 text-white';
+                    if (index === 2) return 'bg-gradient-to-br from-indigo-400 to-violet-500 text-white';
+                    return 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
+                };
 
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-red-500/10', 'text-red-600', 'border-red-500/20');
-                    btn.classList.add('bg-amber-500/10', 'text-amber-600', 'border-amber-500/20');
-                    btnText.textContent = originalText;
-                }, 3000);
-            }
-        }
-    </script>
+                const getSuccessRateBadgeClass = (rate) => {
+                    if (rate >= 95) return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+                    if (rate >= 90) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+                    return 'bg-red-500/10 text-red-600 dark:text-red-400';
+                };
 
-    <!-- Chart.js Initialization -->
-    <script th:inline="javascript">
-        const stats = /*[[${stats}]]*/ [];
-        const sortedStats = [...stats].sort((a, b) => a.date.localeCompare(b.date));
-        const labels = sortedStats.map(s => s.date);
-        const tokenData = sortedStats.map(s => s.totalTokens);
-        const successRateData = sortedStats.map(s => s.successRate * 100);
+                const getSuccessRateTextClass = (rate) => {
+                    if (rate >= 95) return 'text-emerald-600 dark:text-emerald-400';
+                    if (rate >= 90) return 'text-amber-600 dark:text-amber-400';
+                    return 'text-red-600 dark:text-red-400';
+                };
 
-        // Check for dark mode
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        const textColor = isDarkMode ? '#94a3b8' : '#64748b';
-        const gridColor = isDarkMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                const getSuccessRateBarClass = (rate) => {
+                    if (rate >= 95) return 'bg-gradient-to-r from-emerald-500 to-teal-500';
+                    if (rate >= 90) return 'bg-gradient-to-r from-amber-500 to-orange-500';
+                    return 'bg-gradient-to-r from-red-500 to-rose-500';
+                };
 
-        // Daily Usage Trend Chart
-        new Chart(document.getElementById('dailyChart'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Tokens',
-                        data: tokenData,
-                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                        borderColor: 'rgb(99, 102, 241)',
-                        borderWidth: 0,
-                        borderRadius: 4,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Success Rate',
-                        data: successRateData,
-                        type: 'line',
-                        borderColor: 'rgb(16, 185, 129)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y1'
+                const updateSummary = (statsList) => {
+                    summary.totalRequests = statsList.reduce((sum, s) => sum + (s.totalRequestCount || 0), 0);
+                    summary.totalTokens = statsList.reduce((sum, s) => sum + (s.totalTokens || 0), 0);
+                    summary.totalInputTokens = statsList.reduce((sum, s) => sum + (s.totalInputTokens || 0), 0);
+                    summary.totalOutputTokens = statsList.reduce((sum, s) => sum + (s.totalOutputTokens || 0), 0);
+                    summary.totalCost = statsList.reduce((sum, s) => sum + (Number(s.totalEstimatedCostUsd) || 0), 0);
+                    summary.avgDailyCost = statsList.length > 0 ? summary.totalCost / statsList.length : 0;
+                    summary.avgLatency = statsList.length > 0 ? statsList.reduce((sum, s) => sum + (s.avgLatencyMs || 0), 0) / statsList.length : 0;
+                    summary.p50Latency = statsList.length > 0 ? statsList.reduce((sum, s) => sum + (s.p50LatencyMs || 0), 0) / statsList.length : 0;
+                    summary.p90Latency = statsList.length > 0 ? statsList.reduce((sum, s) => sum + (s.p90LatencyMs || 0), 0) / statsList.length : 0;
+                    summary.p99Latency = statsList.length > 0 ? statsList.reduce((sum, s) => sum + (s.p99LatencyMs || 0), 0) / statsList.length : 0;
+                    summary.cacheSavings = statsList.reduce((sum, s) => sum + (Number(s.systemCacheSavedUsd) || 0), 0);
+                    summary.cacheHitRate = statsList.length > 0 ? statsList.reduce((sum, s) => sum + (s.systemCacheHitRate || 0), 0) / statsList.length : 0;
+                    const lastDay = statsList.length > 0 ? statsList[statsList.length - 1] : null;
+                    summary.lastDaySuccessRate = lastDay ? (lastDay.successRate || 0) * 100 : 0;
+                };
+
+                const renderCharts = () => {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const textColor = isDark ? '#94a3b8' : '#64748b';
+                    const gridColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                    const sortedStats = [...stats.value].sort((a, b) => a.date.localeCompare(b.date));
+                    const labels = sortedStats.map(s => s.date);
+
+                    // Daily Chart
+                    const dailyCanvas = document.getElementById('dailyChart');
+                    if (dailyCanvas) {
+                        if (dailyChartInstance) dailyChartInstance.destroy();
+                        dailyChartInstance = new Chart(dailyCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [
+                                    { label: 'Tokens', data: sortedStats.map(s => s.totalTokens), backgroundColor: 'rgba(99, 102, 241, 0.6)', borderWidth: 0, borderRadius: 4, yAxisID: 'y' },
+                                    { label: 'Success Rate', data: sortedStats.map(s => (s.successRate || 0) * 100), type: 'line', borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.4, yAxisID: 'y1' }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, position: 'left', grid: { color: gridColor }, ticks: { color: textColor } },
+                                    y1: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: textColor, callback: v => v + '%' } },
+                                    x: { grid: { display: false }, ticks: { color: textColor } }
+                                }
+                            }
+                        });
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        type: 'linear',
-                        position: 'left',
-                        beginAtZero: true,
-                        grid: { color: gridColor },
-                        ticks: { color: textColor, callback: value => value.toLocaleString() }
-                    },
-                    y1: {
-                        type: 'linear',
-                        position: 'right',
-                        min: 0,
-                        max: 100,
-                        grid: { drawOnChartArea: false },
-                        ticks: { color: textColor, callback: value => value + '%' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: textColor }
+
+                    // Hourly Chart
+                    const hourlyCanvas = document.getElementById('hourlyChart');
+                    if (hourlyCanvas && lastDayStats.value) {
+                        if (hourlyChartInstance) hourlyChartInstance.destroy();
+                        const hourlyData = new Array(24).fill(0);
+                        const peakHour = lastDayStats.value.peakHour || -1;
+                        if (lastDayStats.value.hourlyRequestCount) {
+                            Object.entries(lastDayStats.value.hourlyRequestCount).forEach(([hour, count]) => {
+                                hourlyData[parseInt(hour)] = count;
+                            });
+                        }
+                        hourlyChartInstance = new Chart(hourlyCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                                datasets: [{
+                                    label: 'Requests',
+                                    data: hourlyData,
+                                    backgroundColor: hourlyData.map((_, i) => i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'),
+                                    borderRadius: 4, borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                                    x: { grid: { display: false }, ticks: { color: textColor, maxRotation: 0 } }
+                                }
+                            }
+                        });
                     }
-                }
-            }
-        });
+                };
 
-        // Hourly Distribution Chart
-        const lastDayStats = sortedStats.length > 0 ? sortedStats[sortedStats.length - 1] : null;
-        const hourlyData = new Array(24).fill(0);
-        const peakHour = lastDayStats ? lastDayStats.peakHour : -1;
-
-        if (lastDayStats && lastDayStats.hourlyRequestCount) {
-            Object.entries(lastDayStats.hourlyRequestCount).forEach(([hour, count]) => {
-                hourlyData[parseInt(hour)] = count;
-            });
-        }
-
-        new Chart(document.getElementById('hourlyChart'), {
-            type: 'bar',
-            data: {
-                labels: Array.from({length: 24}, (_, i) => i + ':00'),
-                datasets: [{
-                    label: 'Requests',
-                    data: hourlyData,
-                    backgroundColor: hourlyData.map((_, i) =>
-                        i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'
-                    ),
-                    borderRadius: 4,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: gridColor },
-                        ticks: { color: textColor }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: textColor, maxRotation: 0 }
+                const fetchData = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`/api/v1/dashboard/overview?days=${days.value}`);
+                        if (!response.ok) throw new Error('Failed to fetch data');
+                        const data = await response.json();
+                        stats.value = data.stats || [];
+                        topUsers.value = data.topUsers || [];
+                        startDate.value = data.startDate || '';
+                        endDate.value = data.endDate || '';
+                        const sortedStats = [...stats.value].sort((a, b) => a.date.localeCompare(b.date));
+                        lastDayStats.value = sortedStats.length > 0 ? sortedStats[sortedStats.length - 1] : null;
+                        topModels.value = lastDayStats.value?.topModels || [];
+                        updateSummary(stats.value);
+                        await nextTick();
+                        renderCharts();
+                    } catch (error) {
+                        console.error('Error fetching data:', error);
+                        stats.value = [];
+                        topUsers.value = [];
+                    } finally {
+                        loading.value = false;
                     }
-                }
+                };
+
+                const changeDays = (d) => {
+                    days.value = d;
+                    fetchData();
+                };
+
+                const triggerProcess = async () => {
+                    processing.value = true;
+                    processStatus.value = 'idle';
+                    processButtonText.value = 'Processing...';
+                    try {
+                        const response = await fetch('/api/v1/usage/process/trigger', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        if (!response.ok) throw new Error('Process failed');
+                        const result = await response.json();
+                        processStatus.value = 'success';
+                        processButtonText.value = `${result.processedBatches} batches`;
+                        setTimeout(() => { fetchData(); }, 1500);
+                    } catch (error) {
+                        console.error('Process error:', error);
+                        processStatus.value = 'error';
+                        processButtonText.value = 'Error!';
+                        setTimeout(() => {
+                            processStatus.value = 'idle';
+                            processButtonText.value = 'Run Process';
+                            processing.value = false;
+                        }, 3000);
+                    }
+                };
+
+                onMounted(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const urlDays = parseInt(urlParams.get('days'));
+                    if (urlDays && [7, 14, 30].includes(urlDays)) {
+                        days.value = urlDays;
+                    }
+                    fetchData();
+                });
+
+                return {
+                    loading,
+                    days,
+                    startDate,
+                    endDate,
+                    stats,
+                    topUsers,
+                    topModels,
+                    lastDayStats,
+                    processing,
+                    processStatus,
+                    processButtonText,
+                    summary,
+                    formatNumber,
+                    formatDecimal,
+                    getRankClass,
+                    getModelRankClass,
+                    getSuccessRateBadgeClass,
+                    getSuccessRateTextClass,
+                    getSuccessRateBarClass,
+                    changeDays,
+                    triggerProcess
+                };
             }
-        });
+        }).mount('#overview-app');
     </script>
 </div>
 </body>
