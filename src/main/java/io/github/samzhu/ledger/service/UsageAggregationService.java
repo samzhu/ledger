@@ -374,9 +374,9 @@ public class UsageAggregationService {
             .totalTokens(totalTokens)
             .totalRequestCount(requestCount)
             .totalEstimatedCostUsd(cost)
-            // 配額設定（預設）
-            .quotaEnabled(false)
-            .costLimitUsd(0.0)
+            // 配額設定（預設啟用，限額 100 USD）
+            .quotaEnabled(true)
+            .costLimitUsd(100.0)
             // 當期用量 = 本批次值
             .periodInputTokens(inputTokens)
             .periodOutputTokens(outputTokens)

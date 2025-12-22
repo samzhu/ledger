@@ -355,4 +355,22 @@ public class DashboardController {
 
         return "dashboard/quota";
     }
+
+    /**
+     * 錯誤請求頁面。
+     *
+     * <p>顯示最近的 API 錯誤事件，資料透過前端 fetch API 載入。
+     *
+     * @param model Spring MVC Model
+     * @return 視圖名稱
+     */
+    @GetMapping("/errors")
+    public String errors(Model model) {
+        log.info("Dashboard request: errors");
+
+        model.addAttribute("currentPage", "errors");
+        model.addAttribute("pageTitle", "Error Requests");
+
+        return "dashboard/errors";
+    }
 }
