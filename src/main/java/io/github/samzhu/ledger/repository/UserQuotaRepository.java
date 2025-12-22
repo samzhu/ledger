@@ -1,6 +1,5 @@
 package io.github.samzhu.ledger.repository;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -141,7 +140,7 @@ public interface UserQuotaRepository extends MongoRepository<UserQuota, String> 
             "}, '$set': { 'lastActiveAt': ?6, 'lastUpdatedAt': ?6 } }")
     long incrementUsageByUserId(String userId,
             long inputTokens, long outputTokens, long totalTokens,
-            BigDecimal cost, int requestCount, Instant now);
+            double cost, int requestCount, Instant now);
 
     /**
      * 更新配額狀態（使用率和超額標記）。
@@ -167,7 +166,7 @@ public interface UserQuotaRepository extends MongoRepository<UserQuota, String> 
      */
     @Query("{ 'userId': ?0 }")
     @Update("{ '$inc': { 'bonusCostUsd': ?1 }, '$set': { 'bonusReason': ?2, 'bonusGrantedAt': ?3, 'lastUpdatedAt': ?3 } }")
-    long addBonusByUserId(String userId, BigDecimal amount, String reason, Instant now);
+    long addBonusByUserId(String userId, double amount, String reason, Instant now);
 
     /**
      * 重置週期並設定初始用量（用於跨月時歸檔後重置）。
@@ -202,7 +201,7 @@ public interface UserQuotaRepository extends MongoRepository<UserQuota, String> 
     long resetPeriodAndSetUsageByUserId(String userId, int year, int month,
             Instant periodStart, Instant periodEnd,
             long inputTokens, long outputTokens, long totalTokens,
-            BigDecimal cost, int requestCount, Instant now);
+            double cost, int requestCount, Instant now);
 
     /**
      * 設定配額上限。
@@ -215,5 +214,5 @@ public interface UserQuotaRepository extends MongoRepository<UserQuota, String> 
      */
     @Query("{ 'userId': ?0 }")
     @Update("{ '$set': { 'quotaEnabled': ?1, 'costLimitUsd': ?2, 'lastUpdatedAt': ?3 } }")
-    long updateQuotaSettingsByUserId(String userId, boolean enabled, BigDecimal limitUsd, Instant now);
+    long updateQuotaSettingsByUserId(String userId, boolean enabled, double limitUsd, Instant now);
 }

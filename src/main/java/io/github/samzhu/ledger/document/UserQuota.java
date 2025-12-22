@@ -1,7 +1,5 @@
 package io.github.samzhu.ledger.document;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 
 import org.springframework.data.annotation.Id;
@@ -60,13 +58,13 @@ public record UserQuota(
     /** 歷史累計請求次數 */
     long totalRequestCount,
     /** 歷史累計成本 (USD) */
-    BigDecimal totalEstimatedCostUsd,
+    double totalEstimatedCostUsd,
 
     // ========== 配額設定（管理員設定）==========
     /** 是否啟用配額限制，false = 無限制 */
     boolean quotaEnabled,
     /** 月度成本上限 (USD)，0 = 無限制 */
-    BigDecimal costLimitUsd,
+    double costLimitUsd,
 
     // ========== 當期用量（每月重置）==========
     /** 當月輸入 Token 數 */
@@ -76,13 +74,13 @@ public record UserQuota(
     /** 當月總 Token 數 */
     long periodTokens,
     /** 當月已使用成本 (USD) */
-    BigDecimal periodCostUsd,
+    double periodCostUsd,
     /** 當月請求次數 */
     int periodRequestCount,
 
     // ========== 額外額度（每月重置）==========
     /** 管理員額外給予的 USD 額度 */
-    BigDecimal bonusCostUsd,
+    double bonusCostUsd,
     /** 給予額外額度的原因 */
     String bonusReason,
     /** 最後一次給予額外額度的時間 */
@@ -108,10 +106,8 @@ public record UserQuota(
      *
      * @return 有效成本上限 (USD)
      */
-    public BigDecimal getEffectiveCostLimit() {
-        BigDecimal base = costLimitUsd != null ? costLimitUsd : BigDecimal.ZERO;
-        BigDecimal bonus = bonusCostUsd != null ? bonusCostUsd : BigDecimal.ZERO;
-        return base.add(bonus);
+    public double getEffectiveCostLimit() {
+        return costLimitUsd + bonusCostUsd;
     }
 
     /**
@@ -119,13 +115,12 @@ public record UserQuota(
      *
      * @return 剩餘成本額度 (USD)，如果未啟用配額或無限制則返回 null
      */
-    public BigDecimal getRemainingCost() {
-        if (!quotaEnabled || getEffectiveCostLimit().compareTo(BigDecimal.ZERO) == 0) {
+    public Double getRemainingCost() {
+        if (!quotaEnabled || getEffectiveCostLimit() == 0) {
             return null;
         }
-        BigDecimal used = periodCostUsd != null ? periodCostUsd : BigDecimal.ZERO;
-        BigDecimal remaining = getEffectiveCostLimit().subtract(used);
-        return remaining.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : remaining;
+        double remaining = getEffectiveCostLimit() - periodCostUsd;
+        return remaining < 0 ? 0.0 : remaining;
     }
 
     /**
@@ -147,17 +142,11 @@ public record UserQuota(
      * @param effectiveLimit 有效成本上限
      * @return 使用率百分比 (0-100+)
      */
-    public static double calculateCostUsagePercent(BigDecimal periodCost, BigDecimal effectiveLimit) {
-        if (effectiveLimit == null || effectiveLimit.compareTo(BigDecimal.ZERO) <= 0) {
+    public static double calculateCostUsagePercent(double periodCost, double effectiveLimit) {
+        if (effectiveLimit <= 0) {
             return 0.0;
         }
-        if (periodCost == null) {
-            return 0.0;
-        }
-        return periodCost
-            .divide(effectiveLimit, 4, RoundingMode.HALF_UP)
-            .multiply(BigDecimal.valueOf(100))
-            .doubleValue();
+        return (periodCost / effectiveLimit) * 100.0;
     }
 
     /**
@@ -181,15 +170,15 @@ public record UserQuota(
         private long totalOutputTokens;
         private long totalTokens;
         private long totalRequestCount;
-        private BigDecimal totalEstimatedCostUsd = BigDecimal.ZERO;
+        private double totalEstimatedCostUsd;
         private boolean quotaEnabled;
-        private BigDecimal costLimitUsd = BigDecimal.ZERO;
+        private double costLimitUsd;
         private long periodInputTokens;
         private long periodOutputTokens;
         private long periodTokens;
-        private BigDecimal periodCostUsd = BigDecimal.ZERO;
+        private double periodCostUsd;
         private int periodRequestCount;
-        private BigDecimal bonusCostUsd = BigDecimal.ZERO;
+        private double bonusCostUsd;
         private String bonusReason;
         private Instant bonusGrantedAt;
         private double costUsagePercent;
@@ -208,15 +197,15 @@ public record UserQuota(
         public Builder totalOutputTokens(long totalOutputTokens) { this.totalOutputTokens = totalOutputTokens; return this; }
         public Builder totalTokens(long totalTokens) { this.totalTokens = totalTokens; return this; }
         public Builder totalRequestCount(long totalRequestCount) { this.totalRequestCount = totalRequestCount; return this; }
-        public Builder totalEstimatedCostUsd(BigDecimal totalEstimatedCostUsd) { this.totalEstimatedCostUsd = totalEstimatedCostUsd; return this; }
+        public Builder totalEstimatedCostUsd(double totalEstimatedCostUsd) { this.totalEstimatedCostUsd = totalEstimatedCostUsd; return this; }
         public Builder quotaEnabled(boolean quotaEnabled) { this.quotaEnabled = quotaEnabled; return this; }
-        public Builder costLimitUsd(BigDecimal costLimitUsd) { this.costLimitUsd = costLimitUsd; return this; }
+        public Builder costLimitUsd(double costLimitUsd) { this.costLimitUsd = costLimitUsd; return this; }
         public Builder periodInputTokens(long periodInputTokens) { this.periodInputTokens = periodInputTokens; return this; }
         public Builder periodOutputTokens(long periodOutputTokens) { this.periodOutputTokens = periodOutputTokens; return this; }
         public Builder periodTokens(long periodTokens) { this.periodTokens = periodTokens; return this; }
-        public Builder periodCostUsd(BigDecimal periodCostUsd) { this.periodCostUsd = periodCostUsd; return this; }
+        public Builder periodCostUsd(double periodCostUsd) { this.periodCostUsd = periodCostUsd; return this; }
         public Builder periodRequestCount(int periodRequestCount) { this.periodRequestCount = periodRequestCount; return this; }
-        public Builder bonusCostUsd(BigDecimal bonusCostUsd) { this.bonusCostUsd = bonusCostUsd; return this; }
+        public Builder bonusCostUsd(double bonusCostUsd) { this.bonusCostUsd = bonusCostUsd; return this; }
         public Builder bonusReason(String bonusReason) { this.bonusReason = bonusReason; return this; }
         public Builder bonusGrantedAt(Instant bonusGrantedAt) { this.bonusGrantedAt = bonusGrantedAt; return this; }
         public Builder costUsagePercent(double costUsagePercent) { this.costUsagePercent = costUsagePercent; return this; }

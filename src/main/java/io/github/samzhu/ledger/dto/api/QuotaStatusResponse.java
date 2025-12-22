@@ -94,30 +94,31 @@ public record QuotaStatusResponse(
 
         QuotaInfo quotaInfo = new QuotaInfo(
             quota.quotaEnabled(),
-            quota.costLimitUsd(),
-            quota.bonusCostUsd(),
-            quota.getEffectiveCostLimit()
+            BigDecimal.valueOf(quota.costLimitUsd()),
+            BigDecimal.valueOf(quota.bonusCostUsd()),
+            BigDecimal.valueOf(quota.getEffectiveCostLimit())
         );
 
         UsageInfo usage = new UsageInfo(
-            quota.periodCostUsd(),
+            BigDecimal.valueOf(quota.periodCostUsd()),
             quota.periodInputTokens(),
             quota.periodOutputTokens(),
             quota.periodTokens(),
             quota.periodRequestCount()
         );
 
+        Double remaining = quota.getRemainingCost();
         StatusInfo status = new StatusInfo(
             quota.costUsagePercent(),
-            quota.getRemainingCost(),
+            remaining != null ? BigDecimal.valueOf(remaining) : null,
             quota.quotaExceeded(),
             quota.getUsageLevel()
         );
 
         BonusInfo bonus = null;
-        if (quota.bonusCostUsd() != null && quota.bonusCostUsd().compareTo(BigDecimal.ZERO) > 0) {
+        if (quota.bonusCostUsd() > 0) {
             bonus = new BonusInfo(
-                quota.bonusCostUsd(),
+                BigDecimal.valueOf(quota.bonusCostUsd()),
                 quota.bonusReason(),
                 quota.bonusGrantedAt()
             );
@@ -125,7 +126,7 @@ public record QuotaStatusResponse(
 
         TotalsInfo totals = new TotalsInfo(
             quota.totalTokens(),
-            quota.totalEstimatedCostUsd(),
+            BigDecimal.valueOf(quota.totalEstimatedCostUsd()),
             quota.totalRequestCount()
         );
 

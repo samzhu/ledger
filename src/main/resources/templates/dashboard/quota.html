@@ -140,7 +140,7 @@
                     <span class="text-slate-800 dark:text-white"
                           th:text="'$' + ${#numbers.formatDecimal(user.getEffectiveCostLimit(), 1, 2)}">$10.00</span>
                 </div>
-                <div th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                <div th:if="${user.bonusCostUsd() > 0}"
                      class="flex justify-between">
                     <span class="text-slate-500 dark:text-slate-400">Bonus</span>
                     <span class="text-emerald-600 dark:text-emerald-400 font-medium"
@@ -219,7 +219,7 @@
                               th:classappend="${user.quotaExceeded()} ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
                               th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)}">$0</span>
                     </div>
-                    <div th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                    <div th:if="${user.bonusCostUsd() > 0}">
                         <span class="text-slate-500 dark:text-slate-400">Bonus:</span>
                         <span class="text-emerald-600 dark:text-emerald-400 font-medium ml-1" th:text="'+$' + ${#numbers.formatDecimal(user.bonusCostUsd(), 1, 2)}">+$0</span>
                     </div>
@@ -303,10 +303,10 @@
 
                         <!-- Bonus -->
                         <td class="px-6 py-4 text-right text-sm">
-                            <span th:if="${user.bonusCostUsd() != null && user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                            <span th:if="${user.bonusCostUsd() > 0}"
                                   class="text-emerald-600 dark:text-emerald-400 font-medium"
                                   th:text="'+$' + ${#numbers.formatDecimal(user.bonusCostUsd(), 1, 2)}">+$0.00</span>
-                            <span th:if="${user.bonusCostUsd() == null || user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) <= 0}"
+                            <span th:if="${user.bonusCostUsd() <= 0}"
                                   class="text-slate-400 dark:text-slate-500">-</span>
                         </td>
 

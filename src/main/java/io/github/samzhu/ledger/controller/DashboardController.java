@@ -150,9 +150,9 @@ public class DashboardController {
             .filter(UserQuota::quotaExceeded)
             .count();
         long usersTotalTokens = users.stream().mapToLong(UserQuota::totalTokens).sum();
-        java.math.BigDecimal usersTotalCost = users.stream()
-            .map(UserQuota::totalEstimatedCostUsd)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        double usersTotalCost = users.stream()
+            .mapToDouble(UserQuota::totalEstimatedCostUsd)
+            .sum();
 
         model.addAttribute("currentPage", "users");
         model.addAttribute("pageTitle", "User Usage");
@@ -336,12 +336,12 @@ public class DashboardController {
         long exceededCount = usersWithQuota.stream()
             .filter(UserQuota::quotaExceeded)
             .count();
-        java.math.BigDecimal totalPeriodCost = usersWithQuota.stream()
-            .map(u -> u.periodCostUsd() != null ? u.periodCostUsd() : java.math.BigDecimal.ZERO)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-        java.math.BigDecimal totalBonusGranted = usersWithQuota.stream()
-            .map(u -> u.bonusCostUsd() != null ? u.bonusCostUsd() : java.math.BigDecimal.ZERO)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        double totalPeriodCost = usersWithQuota.stream()
+            .mapToDouble(u -> u.periodCostUsd())
+            .sum();
+        double totalBonusGranted = usersWithQuota.stream()
+            .mapToDouble(u -> u.bonusCostUsd())
+            .sum();
 
         model.addAttribute("currentPage", "quota");
         model.addAttribute("pageTitle", "Quota Management");

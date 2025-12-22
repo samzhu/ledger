@@ -372,7 +372,7 @@
             <div class="bg-slate-50/50 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4">
                 <p class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Remaining</p>
                 <p th:if="${quota.quotaEnabled()}" class="text-base sm:text-lg font-bold"
-                   th:classappend="${quota.getRemainingCost() != null && quota.getRemainingCost().compareTo(T(java.math.BigDecimal).ZERO) <= 0} ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'"
+                   th:classappend="${quota.getRemainingCost() != null && quota.getRemainingCost() <= 0} ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'"
                    th:text="'$' + ${#numbers.formatDecimal(quota.getRemainingCost() != null ? quota.getRemainingCost() : 0, 1, 2)}">$0.00</p>
                 <p th:if="${!quota.quotaEnabled()}" class="text-base sm:text-lg font-bold text-slate-400 dark:text-slate-500">Unlimited</p>
             </div>

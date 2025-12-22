@@ -73,17 +73,16 @@ public class BonusService {
         bonusRecordRepository.save(record);
         log.info("Created bonus record: userId={}, amount={}, grantedBy={}", userId, amount, grantedBy);
 
-        // 3. 累加額外額度
-        userQuotaRepository.addBonusByUserId(userId, amount, reason, now);
+        // 3. 累加額外額度 (BigDecimal → double for storage)
+        userQuotaRepository.addBonusByUserId(userId, amount.doubleValue(), reason, now);
 
-        // 4. 重算使用率
-        BigDecimal currentBonus = quota.bonusCostUsd() != null ? quota.bonusCostUsd() : BigDecimal.ZERO;
+        // 4. 重算使用率 (計算使用 BigDecimal，儲存使用 double)
+        BigDecimal currentBonus = BigDecimal.valueOf(quota.bonusCostUsd());
         BigDecimal newBonus = currentBonus.add(amount);
-        BigDecimal effectiveLimit = (quota.costLimitUsd() != null ? quota.costLimitUsd() : BigDecimal.ZERO)
-            .add(newBonus);
+        BigDecimal effectiveLimit = BigDecimal.valueOf(quota.costLimitUsd()).add(newBonus);
+        BigDecimal periodCost = BigDecimal.valueOf(quota.periodCostUsd());
 
-        BigDecimal periodCost = quota.periodCostUsd() != null ? quota.periodCostUsd() : BigDecimal.ZERO;
-        double usagePercent = UserQuota.calculateCostUsagePercent(periodCost, effectiveLimit);
+        double usagePercent = UserQuota.calculateCostUsagePercent(periodCost.doubleValue(), effectiveLimit.doubleValue());
         boolean exceeded = usagePercent >= 100;
 
         userQuotaRepository.updateQuotaStatusByUserId(userId, usagePercent, exceeded, now);

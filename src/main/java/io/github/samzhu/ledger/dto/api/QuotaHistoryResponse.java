@@ -72,13 +72,13 @@ public record QuotaHistoryResponse(
                 PeriodUtils.formatPeriod(h.periodYear(), h.periodMonth()),
                 new UsageDetail(
                     h.totalTokens(),
-                    h.totalCostUsd(),
+                    BigDecimal.valueOf(h.totalCostUsd()),
                     h.totalRequestCount()
                 ),
                 new QuotaDetail(
-                    h.costLimitUsd(),
-                    h.bonusCostUsd(),
-                    h.effectiveLimitUsd()
+                    BigDecimal.valueOf(h.costLimitUsd()),
+                    BigDecimal.valueOf(h.bonusCostUsd()),
+                    BigDecimal.valueOf(h.effectiveLimitUsd())
                 ),
                 h.finalUsagePercent(),
                 h.wasExceeded(),
@@ -100,7 +100,7 @@ public record QuotaHistoryResponse(
                 Map.Entry::getKey,
                 e -> new ModelDetail(
                     e.getValue(),
-                    h.modelCosts().getOrDefault(e.getKey(), BigDecimal.ZERO)
+                    BigDecimal.valueOf(h.modelCosts().getOrDefault(e.getKey(), 0.0))
                 )
             ));
     }

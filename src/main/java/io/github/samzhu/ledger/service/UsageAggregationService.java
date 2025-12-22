@@ -327,7 +327,7 @@ public class UsageAggregationService {
             long inputTokens = userEvents.stream().mapToLong(UsageEventData::totalInputTokens).sum();
             long outputTokens = userEvents.stream().mapToLong(UsageEventData::outputTokens).sum();
             long totalTokens = userEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
-            BigDecimal cost = costService.calculateBatchCost(userEvents);
+            double cost = costService.calculateBatchCost(userEvents).doubleValue();
             int requestCount = userEvents.size();
 
             // 查詢現有 UserQuota
@@ -359,7 +359,7 @@ public class UsageAggregationService {
      */
     private void createNewUserQuota(String userId, int year, int month,
             long inputTokens, long outputTokens, long totalTokens,
-            BigDecimal cost, int requestCount) {
+            double cost, int requestCount) {
 
         Instant now = Instant.now();
         UserQuota newQuota = UserQuota.builder()
@@ -376,7 +376,7 @@ public class UsageAggregationService {
             .totalEstimatedCostUsd(cost)
             // 配額設定（預設）
             .quotaEnabled(false)
-            .costLimitUsd(BigDecimal.ZERO)
+            .costLimitUsd(0.0)
             // 當期用量 = 本批次值
             .periodInputTokens(inputTokens)
             .periodOutputTokens(outputTokens)
@@ -384,7 +384,7 @@ public class UsageAggregationService {
             .periodCostUsd(cost)
             .periodRequestCount(requestCount)
             // 額外額度
-            .bonusCostUsd(BigDecimal.ZERO)
+            .bonusCostUsd(0.0)
             // 配額狀態
             .costUsagePercent(0.0)
             .quotaExceeded(false)
@@ -403,7 +403,7 @@ public class UsageAggregationService {
      */
     private void archiveAndResetPeriod(UserQuota quota, int newYear, int newMonth,
             long inputTokens, long outputTokens, long totalTokens,
-            BigDecimal cost, int requestCount) {
+            double cost, int requestCount) {
 
         int oldYear = quota.periodYear();
         int oldMonth = quota.periodMonth();
@@ -415,7 +415,7 @@ public class UsageAggregationService {
 
             // 取得模型使用分布（從 daily_user_usage 聚合）
             Map<String, Long> modelTokens = aggregateModelTokensForUser(quota.userId(), oldYear, oldMonth);
-            Map<String, BigDecimal> modelCosts = aggregateModelCostsForUser(quota.userId(), oldYear, oldMonth);
+            Map<String, Double> modelCosts = aggregateModelCostsForUser(quota.userId(), oldYear, oldMonth);
 
             QuotaHistory history = QuotaHistory.fromUserQuota(quota, modelTokens, modelCosts);
             quotaHistoryRepository.save(history);
@@ -442,7 +442,7 @@ public class UsageAggregationService {
      */
     private void incrementUsage(UserQuota quota,
             long inputTokens, long outputTokens, long totalTokens,
-            BigDecimal cost, int requestCount) {
+            double cost, int requestCount) {
 
         Instant now = Instant.now();
 
@@ -462,18 +462,17 @@ public class UsageAggregationService {
      * 重新計算用戶的配額使用率。
      */
     private void recalculateUsagePercent(String userId, UserQuota quota,
-            long addedInputTokens, long addedOutputTokens, long addedTotalTokens, BigDecimal addedCost) {
+            long addedInputTokens, long addedOutputTokens, long addedTotalTokens, double addedCost) {
 
         if (!quota.quotaEnabled()) {
             return;
         }
 
         // 計算新的當期成本
-        BigDecimal newPeriodCost = (quota.periodCostUsd() != null ? quota.periodCostUsd() : BigDecimal.ZERO)
-            .add(addedCost);
+        double newPeriodCost = quota.periodCostUsd() + addedCost;
 
         // 計算有效配額上限
-        BigDecimal effectiveLimit = quota.getEffectiveCostLimit();
+        double effectiveLimit = quota.getEffectiveCostLimit();
 
         // 計算使用率
         double usagePercent = UserQuota.calculateCostUsagePercent(newPeriodCost, effectiveLimit);
@@ -511,7 +510,7 @@ public class UsageAggregationService {
     /**
      * 聚合用戶某月的模型成本分布。
      */
-    private Map<String, BigDecimal> aggregateModelCostsForUser(String userId, int year, int month) {
+    private Map<String, Double> aggregateModelCostsForUser(String userId, int year, int month) {
         String startId = String.format("%d-%02d-01_%s", year, month, userId);
         String endId = String.format("%d-%02d-31_%s", year, month, userId);
 
@@ -520,11 +519,11 @@ public class UsageAggregationService {
 
         List<DailyUserUsage> usages = mongoTemplate.find(query, DailyUserUsage.class);
 
-        Map<String, BigDecimal> result = new HashMap<>();
+        Map<String, Double> result = new HashMap<>();
         for (DailyUserUsage usage : usages) {
             if (usage.modelBreakdown() != null) {
                 usage.modelBreakdown().forEach((model, breakdown) -> {
-                    result.merge(model, breakdown.costUsd(), BigDecimal::add);
+                    result.merge(model, breakdown.costUsd().doubleValue(), Double::sum);
                 });
             }
         }

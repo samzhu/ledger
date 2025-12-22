@@ -106,6 +106,67 @@ Move gradient definitions **outside** the loop:
 
 ---
 
+## Firestore/MongoDB: BigDecimal 與 $inc 不相容
+
+### Problem Description
+
+當使用 Firestore (MongoDB API) 的 `$inc` 原子操作時，`BigDecimal` 類型會導致錯誤。
+
+### Error Symptoms
+
+```
+MongoWriteException: Write error: WriteError{code=2, message='param periodCostUsd is not a number'}
+```
+
+### Root Cause
+
+Spring Data MongoDB 預設將 `BigDecimal` 序列化為字串，而非數字。Firestore 的 `$inc` 操作要求欄位必須是數字類型。
+
+### Solution
+
+對於需要使用 `$inc` 操作的 Document（如 `UserQuota`、`QuotaHistory`），將成本欄位從 `BigDecimal` 改為 `double`：
+
+```java
+// BAD - BigDecimal 會被序列化為字串
+BigDecimal periodCostUsd;
+
+// GOOD - double 是原生數字類型
+double periodCostUsd;
+```
+
+### Design Principle
+
+- **計算層**：使用 `BigDecimal` 確保精度
+- **儲存層**：使用 `double` 確保 Firestore 相容
+- **API 回應**：使用 `BigDecimal.valueOf()` 轉回精確表示
+
+```java
+// Service layer - calculation with BigDecimal
+BigDecimal cost = costService.calculateBatchCost(events);
+
+// Repository call - convert to double for storage
+userQuotaRepository.incrementUsageByUserId(userId, ..., cost.doubleValue(), ...);
+```
+
+### Affected Documents
+
+- `UserQuota` - `periodCostUsd`, `totalEstimatedCostUsd`, `costLimitUsd`, `bonusCostUsd`
+- `QuotaHistory` - `totalCostUsd`, `costLimitUsd`, `bonusCostUsd`, `effectiveLimitUsd`
+
+### Template Updates
+
+Thymeleaf 模板中的 `BigDecimal.compareTo()` 需改為簡單比較：
+
+```html
+<!-- BAD - BigDecimal comparison -->
+th:if="${user.bonusCostUsd().compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+
+<!-- GOOD - double comparison -->
+th:if="${user.bonusCostUsd() > 0}"
+```
+
+---
+
 ## Native Image: Joda-Time Resource Missing
 
 ### Problem Description

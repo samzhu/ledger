@@ -141,23 +141,19 @@ public class QuotaApiController {
             return ResponseEntity.notFound().build();
         }
 
-        // 更新配額設定
+        // 更新配額設定 (BigDecimal → double for storage)
         userQuotaRepository.updateQuotaSettingsByUserId(
             userId,
             request.enabled(),
-            request.costLimitUsd(),
+            request.costLimitUsd().doubleValue(),
             Instant.now()
         );
 
         // 重算使用率（如果啟用配額）
         UserQuota quota = userQuotaRepository.findByUserId(userId).orElse(null);
         if (quota != null && request.enabled()) {
-            double usagePercent = UserQuota.calculateCostUsagePercent(
-                quota.periodCostUsd(),
-                request.costLimitUsd().add(
-                    quota.bonusCostUsd() != null ? quota.bonusCostUsd() : java.math.BigDecimal.ZERO
-                )
-            );
+            double effectiveLimit = request.costLimitUsd().doubleValue() + quota.bonusCostUsd();
+            double usagePercent = UserQuota.calculateCostUsagePercent(quota.periodCostUsd(), effectiveLimit);
             boolean exceeded = usagePercent >= 100;
             userQuotaRepository.updateQuotaStatusByUserId(userId, usagePercent, exceeded, Instant.now());
         }

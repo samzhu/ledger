@@ -1,6 +1,5 @@
 package io.github.samzhu.ledger.document;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
@@ -45,17 +44,17 @@ public record QuotaHistory(
     /** 該月總 Token 數 */
     long totalTokens,
     /** 該月總成本 (USD) */
-    BigDecimal totalCostUsd,
+    double totalCostUsd,
     /** 該月請求次數 */
     int totalRequestCount,
 
     // ========== 配額資訊（當時設定）==========
     /** 當月基礎配額設定 (USD) */
-    BigDecimal costLimitUsd,
+    double costLimitUsd,
     /** 當月額外額度 (USD) */
-    BigDecimal bonusCostUsd,
+    double bonusCostUsd,
     /** 當月有效配額 = costLimitUsd + bonusCostUsd */
-    BigDecimal effectiveLimitUsd,
+    double effectiveLimitUsd,
     /** 月底最終使用率 */
     double finalUsagePercent,
     /** 該月是否曾經超額 */
@@ -65,7 +64,7 @@ public record QuotaHistory(
     /** 各模型使用的 Token 數 */
     Map<String, Long> modelTokens,
     /** 各模型產生的成本 */
-    Map<String, BigDecimal> modelCosts,
+    Map<String, Double> modelCosts,
 
     // ========== 時間戳記 ==========
     /** 歸檔執行時間 */
@@ -83,7 +82,7 @@ public record QuotaHistory(
     public static QuotaHistory fromUserQuota(
             UserQuota quota,
             Map<String, Long> modelTokens,
-            Map<String, BigDecimal> modelCosts) {
+            Map<String, Double> modelCosts) {
 
         return new QuotaHistory(
             null, // ID 自動產生
