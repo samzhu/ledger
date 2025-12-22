@@ -117,7 +117,7 @@
                                 stroke-width="8" fill="none"
                                 stroke-linecap="round"
                                 class="drop-shadow-lg"
-                                th:style="'stroke-dasharray: 283; stroke-dashoffset: ' + ${283 - (283 * T(Math).min(100, user.costUsagePercent()) / 100)}"/>
+                                th:style="'stroke-dasharray: 283; stroke-dashoffset: ' + ${283 - (283 * (user.costUsagePercent() > 100 ? 100 : user.costUsagePercent()) / 100)}"/>
                     </svg>
                     <!-- Percentage Text -->
                     <div class="absolute inset-0 flex items-center justify-center">
@@ -238,7 +238,7 @@
                     <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div class="h-2 rounded-full transition-all duration-500"
                              th:classappend="${user.costUsagePercent() >= 100} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 80} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
-                             th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
+                             th:style="'width: ' + ${user.costUsagePercent() > 100 ? 100 : user.costUsagePercent()} + '%'"></div>
                     </div>
                 </div>
             </div>
@@ -325,7 +325,7 @@
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                                     <div class="h-2 rounded-full transition-all duration-500"
                                          th:classappend="${user.costUsagePercent() >= 100} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 80} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
-                                         th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
+                                         th:style="'width: ' + ${user.costUsagePercent() > 100 ? 100 : user.costUsagePercent()} + '%'"></div>
                                 </div>
                             </div>
                         </td>

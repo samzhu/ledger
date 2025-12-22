@@ -112,7 +112,7 @@
                     <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                         <div class="h-1.5 rounded-full transition-all duration-300"
                              th:classappend="${user.costUsagePercent() >= 90} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 70} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
-                             th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
+                             th:style="'width: ' + ${user.costUsagePercent() > 100 ? 100 : user.costUsagePercent()} + '%'"></div>
                     </div>
                     <div class="text-xs text-slate-400 dark:text-slate-500 mt-1"
                          th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)} + ' / $' + ${#numbers.formatDecimal(user.costLimitUsd() != null ? user.costLimitUsd() : 0, 1, 2)}">$0 / $0</div>
@@ -193,7 +193,7 @@
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                                     <div class="h-1.5 rounded-full transition-all duration-300"
                                          th:classappend="${user.costUsagePercent() >= 90} ? 'bg-gradient-to-r from-red-500 to-rose-500' : (${user.costUsagePercent() >= 70} ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500')"
-                                         th:style="'width: ' + ${T(Math).min(100, user.costUsagePercent())} + '%'"></div>
+                                         th:style="'width: ' + ${user.costUsagePercent() > 100 ? 100 : user.costUsagePercent()} + '%'"></div>
                                 </div>
                                 <div class="text-xs text-slate-400 dark:text-slate-500 mt-1 text-center"
                                      th:text="'$' + ${#numbers.formatDecimal(user.periodCostUsd() != null ? user.periodCostUsd() : 0, 1, 2)} + ' / $' + ${#numbers.formatDecimal(user.costLimitUsd() != null ? user.costLimitUsd() : 0, 1, 2)}">$0 / $0</div>

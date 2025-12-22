@@ -64,7 +64,7 @@
                                 stroke-width="8" fill="none"
                                 stroke-linecap="round"
                                 class="drop-shadow-lg"
-                                th:style="'stroke-dasharray: 251; stroke-dashoffset: ' + ${251 - (251 * T(Math).min(100, quota.costUsagePercent()) / 100)}"/>
+                                th:style="'stroke-dasharray: 251; stroke-dashoffset: ' + ${251 - (251 * (quota.costUsagePercent() > 100 ? 100 : quota.costUsagePercent()) / 100)}"/>
                         <defs>
                             <linearGradient id="gradientRed" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stop-color="#ef4444"/>
