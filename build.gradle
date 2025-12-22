@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'io.github.samzhu'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.1'
 description = 'LLM 用量帳本服務'
 
 java {
