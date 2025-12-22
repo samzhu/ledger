@@ -313,7 +313,7 @@ public class DashboardController {
     /**
      * 配額管理頁面。
      *
-     * <p>顯示所有啟用配額的用戶及其使用狀況。
+     * <p>頁面框架由伺服器渲染，資料透過前端 fetch API 從 /api/v1/quota/dashboard 載入。
      *
      * @param model Spring MVC Model
      * @return 視圖名稱
@@ -322,36 +322,8 @@ public class DashboardController {
     public String quota(Model model) {
         log.info("Dashboard request: quota management");
 
-        List<UserQuota> allUsers = queryService.getAllUsers();
-
-        // Filter users with quota enabled
-        // Note: Using ArrayList instead of .toList() for SpEL compatibility with Java 25
-        List<UserQuota> usersWithQuota = new java.util.ArrayList<>(allUsers.stream()
-            .filter(UserQuota::quotaEnabled)
-            .sorted((a, b) -> Double.compare(b.costUsagePercent(), a.costUsagePercent()))
-            .toList());
-
-        // Calculate summary statistics
-        long quotaEnabledCount = usersWithQuota.size();
-        long exceededCount = usersWithQuota.stream()
-            .filter(UserQuota::quotaExceeded)
-            .count();
-        double totalPeriodCost = usersWithQuota.stream()
-            .mapToDouble(u -> u.periodCostUsd())
-            .sum();
-        double totalBonusGranted = usersWithQuota.stream()
-            .mapToDouble(u -> u.bonusCostUsd())
-            .sum();
-
         model.addAttribute("currentPage", "quota");
         model.addAttribute("pageTitle", "Quota Management");
-        model.addAttribute("usersWithQuota", usersWithQuota);
-        model.addAttribute("quotaEnabledCount", quotaEnabledCount);
-        model.addAttribute("exceededCount", exceededCount);
-        model.addAttribute("totalPeriodCost", totalPeriodCost);
-        model.addAttribute("totalBonusGranted", totalBonusGranted);
-
-        log.debug("Quota page loaded: {} users with quota, {} exceeded", quotaEnabledCount, exceededCount);
 
         return "dashboard/quota";
     }

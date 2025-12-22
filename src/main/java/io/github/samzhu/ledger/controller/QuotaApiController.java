@@ -23,6 +23,7 @@ import io.github.samzhu.ledger.document.BonusRecord;
 import io.github.samzhu.ledger.document.QuotaHistory;
 import io.github.samzhu.ledger.document.UserQuota;
 import io.github.samzhu.ledger.dto.api.BonusGrantRequest;
+import io.github.samzhu.ledger.dto.api.QuotaDashboardResponse;
 import io.github.samzhu.ledger.dto.api.BonusHistoryResponse;
 import io.github.samzhu.ledger.dto.api.QuotaConfigRequest;
 import io.github.samzhu.ledger.dto.api.QuotaHistoryResponse;
@@ -56,6 +57,30 @@ public class QuotaApiController {
     }
 
     // ========== 配額狀態查詢 ==========
+
+    /**
+     * 取得配額儀表板資料。
+     *
+     * <p>回傳所有啟用配額的用戶，按使用率降序排列。
+     * 包含摘要統計和用戶清單。
+     *
+     * @return 配額儀表板資料
+     */
+    @GetMapping("/dashboard")
+    public ResponseEntity<QuotaDashboardResponse> getQuotaDashboard() {
+        log.debug("Getting quota dashboard data");
+
+        List<UserQuota> allUsers = userQuotaRepository.findAll();
+
+        // Filter quota-enabled users and sort by usage percentage (descending)
+        List<UserQuota> usersWithQuota = allUsers.stream()
+            .filter(UserQuota::quotaEnabled)
+            .sorted((a, b) -> Double.compare(b.costUsagePercent(), a.costUsagePercent()))
+            .toList();
+
+        QuotaDashboardResponse response = QuotaDashboardResponse.fromUserQuotas(usersWithQuota);
+        return ResponseEntity.ok(response);
+    }
 
     /**
      * 取得用戶配額狀態。
