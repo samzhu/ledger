@@ -231,7 +231,7 @@
                     <div class="flex items-center gap-2">
                         <span class="text-sm text-slate-500 dark:text-slate-400">Peak Hour:</span>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600 dark:text-orange-400">
-                            {{ lastDayStats.peakHour }}:00 ({{ lastDayStats.peakHourRequests }} req)
+                            {{ formatHour(isoToLocalHour(lastDayStats.peakHour)) }} ({{ lastDayStats.peakHourRequests }} req)
                         </span>
                     </div>
                 </div>
@@ -366,6 +366,17 @@
                     return 'bg-gradient-to-r from-red-500 to-rose-500';
                 };
 
+                // Parse ISO 8601 timestamp and get local hour (0-23)
+                // e.g., "2025-12-22T05:00:00Z" -> 13 (in UTC+8)
+                const isoToLocalHour = (isoString) => {
+                    return dayjs(isoString).hour();
+                };
+
+                // Format hour for display (e.g., "13:00")
+                const formatHour = (hour) => {
+                    return hour + ':00';
+                };
+
                 const updateSummary = (statsList) => {
                     summary.totalRequests = statsList.reduce((sum, s) => sum + (s.totalRequestCount || 0), 0);
                     summary.totalTokens = statsList.reduce((sum, s) => sum + (s.totalTokens || 0), 0);
@@ -416,25 +427,30 @@
                         });
                     }
 
-                    // Hourly Chart
+                    // Hourly Chart - Parse ISO 8601 timestamps (auto-converts to local time)
                     const hourlyCanvas = document.getElementById('hourlyChart');
                     if (hourlyCanvas && lastDayStats.value) {
                         if (hourlyChartInstance) hourlyChartInstance.destroy();
-                        const hourlyData = new Array(24).fill(0);
-                        const peakHour = lastDayStats.value.peakHour || -1;
+                        // Create array for local hours (0-23)
+                        const localHourlyData = new Array(24).fill(0);
+                        // Parse ISO peak hour to local hour
+                        const localPeakHour = lastDayStats.value.peakHour ? isoToLocalHour(lastDayStats.value.peakHour) : -1;
+
+                        // Map ISO hourly data to local hours (dayjs auto-converts to local timezone)
                         if (lastDayStats.value.hourlyRequestCount) {
-                            Object.entries(lastDayStats.value.hourlyRequestCount).forEach(([hour, count]) => {
-                                hourlyData[parseInt(hour)] = count;
+                            Object.entries(lastDayStats.value.hourlyRequestCount).forEach(([isoTime, count]) => {
+                                const localHour = isoToLocalHour(isoTime);
+                                localHourlyData[localHour] = count;
                             });
                         }
                         hourlyChartInstance = new Chart(hourlyCanvas, {
                             type: 'bar',
                             data: {
-                                labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                                labels: Array.from({length: 24}, (_, i) => formatHour(i)),
                                 datasets: [{
                                     label: 'Requests',
-                                    data: hourlyData,
-                                    backgroundColor: hourlyData.map((_, i) => i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'),
+                                    data: localHourlyData,
+                                    backgroundColor: localHourlyData.map((_, i) => i === localPeakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'),
                                     borderRadius: 4, borderWidth: 0
                                 }]
                             },
@@ -540,7 +556,9 @@
                     getSuccessRateTextClass,
                     getSuccessRateBarClass,
                     changeDays,
-                    triggerProcess
+                    triggerProcess,
+                    isoToLocalHour,
+                    formatHour
                 };
             }
         }).mount('#overview-app');

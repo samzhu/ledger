@@ -9,6 +9,8 @@ import java.util.Set;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 模型日用量聚合文件（增強版）。
  *
@@ -44,14 +46,14 @@ public record DailyModelUsage(
     int successCount,
     int errorCount,
     int uniqueUsers,
-    Set<String> userIdSet,  // Track user IDs for accurate uniqueUsers count across batches
+    @JsonIgnore Set<String> userIdSet,  // Internal: Track user IDs for accurate uniqueUsers count across batches
 
     // === 錯誤類型分布 ===
     Map<String, Integer> errorBreakdown,
 
     // === 延遲統計 ===
     LatencyStats latencyStats,
-    byte[] latencyDigest,
+    @JsonIgnore byte[] latencyDigest,  // Internal: T-Digest binary data for percentile calculations
 
     // === Cache 效率 ===
     CacheEfficiency cacheEfficiency,

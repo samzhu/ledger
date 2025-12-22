@@ -8,6 +8,8 @@ import java.util.Map;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 用戶日用量聚合文件（增強版）。
  *
@@ -49,7 +51,7 @@ public record DailyUserUsage(
 
     // === 延遲統計 ===
     LatencyStats latencyStats,
-    byte[] latencyDigest,
+    @JsonIgnore byte[] latencyDigest,  // Internal: T-Digest binary data for percentile calculations
 
     // === Cache 效率 ===
     CacheEfficiency cacheEfficiency,

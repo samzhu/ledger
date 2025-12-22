@@ -10,6 +10,8 @@ import java.util.Set;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 系統日統計文件（簡化重新設計版）。
  *
@@ -38,7 +40,7 @@ public record SystemStats(
     long totalTokens,
     int totalRequestCount,
     int uniqueUsers,
-    Set<String> userIdSet,  // Track user IDs for accurate uniqueUsers count across batches
+    @JsonIgnore Set<String> userIdSet,  // Internal: Track user IDs for accurate uniqueUsers count across batches
     BigDecimal totalEstimatedCostUsd,
 
     // === 成功率 ===

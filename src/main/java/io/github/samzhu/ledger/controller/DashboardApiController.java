@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,10 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.github.samzhu.ledger.document.DailyModelUsage;
-import io.github.samzhu.ledger.document.DailyUserUsage;
-import io.github.samzhu.ledger.document.SystemStats;
 import io.github.samzhu.ledger.document.UserQuota;
+import io.github.samzhu.ledger.dto.api.DailyModelUsageApiDto;
+import io.github.samzhu.ledger.dto.api.DailyUserUsageApiDto;
+import io.github.samzhu.ledger.dto.api.SystemStatsApiDto;
 import io.github.samzhu.ledger.service.UsageQueryService;
 import io.github.samzhu.ledger.service.UsageQueryService.ModelSummary;
 
@@ -47,6 +46,8 @@ public class DashboardApiController {
 
     /**
      * System overview data.
+     *
+     * <p>Returns hourly data with ISO 8601 UTC timestamps for unambiguous timezone handling.
      */
     @GetMapping("/overview")
     public ResponseEntity<OverviewResponse> getOverview(
@@ -57,7 +58,11 @@ public class DashboardApiController {
 
         log.debug("API request: overview, days={}", days);
 
-        List<SystemStats> stats = queryService.getSystemDailyStats(startDate, endDate);
+        // Convert to DTOs with ISO 8601 hourly format
+        List<SystemStatsApiDto> stats = queryService.getSystemDailyStats(startDate, endDate)
+            .stream()
+            .map(SystemStatsApiDto::from)
+            .toList();
         List<UserQuota> topUsers = queryService.getTopUsers(10);
 
         return ResponseEntity.ok(new OverviewResponse(
@@ -83,6 +88,8 @@ public class DashboardApiController {
 
     /**
      * User detail with daily usage.
+     *
+     * <p>Returns hourly data with ISO 8601 UTC timestamps for unambiguous timezone handling.
      */
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserDetailResponse> getUserDetail(
@@ -94,7 +101,11 @@ public class DashboardApiController {
 
         log.debug("API request: user detail, userId={}, days={}", userId, days);
 
-        List<DailyUserUsage> usages = queryService.getUserDailyUsage(userId, startDate, endDate);
+        // Convert to DTOs with ISO 8601 hourly format
+        List<DailyUserUsageApiDto> usages = queryService.getUserDailyUsage(userId, startDate, endDate)
+            .stream()
+            .map(DailyUserUsageApiDto::from)
+            .toList();
         UserQuota quota = queryService.getUserQuota(userId).orElse(null);
 
         return ResponseEntity.ok(new UserDetailResponse(
@@ -131,6 +142,8 @@ public class DashboardApiController {
 
     /**
      * Model detail with daily usage.
+     *
+     * <p>Returns hourly data with ISO 8601 UTC timestamps for unambiguous timezone handling.
      */
     @GetMapping("/models/{modelName}")
     public ResponseEntity<ModelDetailResponse> getModelDetail(
@@ -142,7 +155,11 @@ public class DashboardApiController {
 
         log.debug("API request: model detail, modelName={}, days={}", modelName, days);
 
-        List<DailyModelUsage> usages = queryService.getModelDailyUsage(modelName, startDate, endDate);
+        // Convert to DTOs with ISO 8601 hourly format
+        List<DailyModelUsageApiDto> usages = queryService.getModelDailyUsage(modelName, startDate, endDate)
+            .stream()
+            .map(DailyModelUsageApiDto::from)
+            .toList();
 
         return ResponseEntity.ok(new ModelDetailResponse(
             modelName,
@@ -159,7 +176,7 @@ public class DashboardApiController {
         String startDate,
         String endDate,
         int days,
-        List<SystemStats> stats,
+        List<SystemStatsApiDto> stats,
         List<UserQuota> topUsers
     ) {}
 
@@ -173,7 +190,7 @@ public class DashboardApiController {
         String endDate,
         int days,
         UserQuota quota,
-        List<DailyUserUsage> usages
+        List<DailyUserUsageApiDto> usages
     ) {}
 
     public record ModelsResponse(
@@ -188,6 +205,6 @@ public class DashboardApiController {
         String startDate,
         String endDate,
         int days,
-        List<DailyModelUsage> usages
+        List<DailyModelUsageApiDto> usages
     ) {}
 }

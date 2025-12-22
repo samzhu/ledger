@@ -581,6 +581,11 @@
 
                     const modelColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+                    // Parse ISO 8601 timestamp and get local hour (0-23)
+                    // e.g., "2025-12-22T05:00:00Z" -> 13 (in UTC+8)
+                    const isoToLocalHour = (isoString) => dayjs(isoString).hour();
+                    const formatHour = (hour) => hour + ':00';
+
                     // Computed properties
                     const effectiveCostLimit = computed(() => {
                         if (!quota.value) return 0;
@@ -778,24 +783,26 @@
                             });
                         }
 
-                        // Hourly Chart
+                        // Hourly Chart - Parse ISO 8601 timestamps (auto-converts to local time)
                         const hourlyCtx = document.getElementById('hourlyChart');
                         if (hourlyCtx) {
-                            const hourlyData = new Array(24).fill(0);
+                            const localHourlyData = new Array(24).fill(0);
                             if (lastUsage.value?.hourlyBreakdown) {
-                                Object.entries(lastUsage.value.hourlyBreakdown).forEach(([hour, data]) => {
-                                    hourlyData[parseInt(hour)] = data.requestCount;
+                                Object.entries(lastUsage.value.hourlyBreakdown).forEach(([isoTime, data]) => {
+                                    const localHour = isoToLocalHour(isoTime);
+                                    localHourlyData[localHour] = data.requestCount;
                                 });
                             }
-                            const peakHour = lastUsage.value?.peakHour ?? -1;
+                            // Parse ISO peak hour to local hour
+                            const localPeakHour = lastUsage.value?.peakHour ? isoToLocalHour(lastUsage.value.peakHour) : -1;
                             hourlyChartInstance = new Chart(hourlyCtx, {
                                 type: 'bar',
                                 data: {
-                                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                                    labels: Array.from({length: 24}, (_, i) => formatHour(i)),
                                     datasets: [{
                                         label: 'Requests',
-                                        data: hourlyData,
-                                        backgroundColor: hourlyData.map((_, i) => i === peakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'),
+                                        data: localHourlyData,
+                                        backgroundColor: localHourlyData.map((_, i) => i === localPeakHour ? 'rgba(249, 115, 22, 0.7)' : 'rgba(99, 102, 241, 0.5)'),
                                         borderWidth: 0, borderRadius: 2
                                     }]
                                 },
