@@ -161,11 +161,8 @@ public class UsageAggregationService {
             // === Cache 效率 ===
             DailyUserUsage.CacheEfficiency cacheEfficiency = calculateCacheEfficiency(userEvents);
 
-            // === 每小時分布 ===
+            // === 每小時分布 (peakHour will be computed after bulk update) ===
             Map<Integer, HourlyBreakdown> hourlyBreakdown = aggregateHourlyBreakdown(userEvents);
-            int peakHour = findPeakHour(hourlyBreakdown);
-            int peakHourRequests = hourlyBreakdown.containsKey(peakHour)
-                ? hourlyBreakdown.get(peakHour).requestCount() : 0;
 
             // === 模型分布 ===
             Map<String, ModelBreakdown> modelBreakdown = aggregateModelBreakdown(userEvents);
@@ -189,8 +186,6 @@ public class UsageAggregationService {
                 .set("latencyStats", latencyStats)
                 .set("latencyDigest", digestBytes)
                 .set("cacheEfficiency", cacheEfficiency)
-                .set("peakHour", peakHour)
-                .set("peakHourRequests", peakHourRequests)
                 .set("costBreakdown", costBreakdown)
                 .set("lastUpdatedAt", Instant.now());
 
@@ -221,6 +216,35 @@ public class UsageAggregationService {
         });
 
         bulkOps.execute();
+
+        // Compute derived fields (peakHour) from accumulated data
+        grouped.keySet().forEach(docId -> {
+            Query query = Query.query(Criteria.where("_id").is(docId));
+            DailyUserUsage current = mongoTemplate.findOne(query, DailyUserUsage.class);
+            if (current == null) return;
+
+            // Find peak hour from accumulated hourlyBreakdown
+            Map<Integer, DailyUserUsage.HourlyBreakdown> hourly = current.hourlyBreakdown();
+            int peakHour = 0;
+            int peakHourRequests = 0;
+            if (hourly != null && !hourly.isEmpty()) {
+                var peak = hourly.entrySet().stream()
+                    .max((a, b) -> Integer.compare(a.getValue().requestCount(), b.getValue().requestCount()))
+                    .orElse(null);
+                if (peak != null) {
+                    peakHour = peak.getKey();
+                    peakHourRequests = peak.getValue().requestCount();
+                }
+            }
+
+            // Update derived fields
+            Update derivedUpdate = new Update()
+                .set("peakHour", peakHour)
+                .set("peakHourRequests", peakHourRequests);
+
+            mongoTemplate.updateFirst(query, derivedUpdate, DailyUserUsage.class);
+        });
+
         log.debug("Updated daily_user_usage: {} documents", grouped.size());
     }
 
@@ -248,7 +272,11 @@ public class UsageAggregationService {
             long totalTokens = modelEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
             int successCount = (int) modelEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = modelEvents.size() - successCount;
-            int uniqueUsers = (int) modelEvents.stream().map(UsageEventData::userId).distinct().count();
+
+            // Collect batch user IDs for $addToSet (fixes uniqueUsers bug)
+            Set<String> batchUserIds = modelEvents.stream()
+                .map(UsageEventData::userId)
+                .collect(Collectors.toSet());
 
             BigDecimal totalCost = costService.calculateBatchCost(modelEvents);
 
@@ -264,10 +292,8 @@ public class UsageAggregationService {
             // === Cache 效率 ===
             DailyModelUsage.CacheEfficiency cacheEfficiency = calculateModelCacheEfficiency(modelEvents);
 
-            // === 每小時分布 ===
+            // === 每小時分布 (peakHour will be computed after bulk update) ===
             Map<Integer, Integer> hourlyRequestCount = aggregateHourlyRequestCount(modelEvents);
-            int peakHour = findPeakHourFromCount(hourlyRequestCount);
-            int peakHourRequests = hourlyRequestCount.getOrDefault(peakHour, 0);
 
             Query query = Query.query(Criteria.where("_id").is(docId));
             Update update = new Update()
@@ -281,14 +307,16 @@ public class UsageAggregationService {
                 .inc("requestCount", modelEvents.size())
                 .inc("successCount", successCount)
                 .inc("errorCount", errorCount)
-                .set("uniqueUsers", uniqueUsers)
                 .inc("estimatedCostUsd", totalCost.doubleValue())
                 .set("latencyStats", latencyStats)
                 .set("latencyDigest", digestBytes)
                 .set("cacheEfficiency", cacheEfficiency)
-                .set("peakHour", peakHour)
-                .set("peakHourRequests", peakHourRequests)
                 .set("lastUpdatedAt", Instant.now());
+
+            // Use $addToSet for each userId (accumulates across batches)
+            for (String userId : batchUserIds) {
+                update.addToSet("userIdSet", userId);
+            }
 
             // 錯誤分布使用 $inc
             errorBreakdown.forEach((type, count) ->
@@ -302,6 +330,39 @@ public class UsageAggregationService {
         });
 
         bulkOps.execute();
+
+        // Compute derived fields (uniqueUsers, peakHour) from accumulated data
+        grouped.keySet().forEach(docId -> {
+            Query query = Query.query(Criteria.where("_id").is(docId));
+            DailyModelUsage current = mongoTemplate.findOne(query, DailyModelUsage.class);
+            if (current == null) return;
+
+            // Compute correct values from accumulated data
+            int uniqueUsers = current.userIdSet() != null ? current.userIdSet().size() : 0;
+
+            // Find peak hour from accumulated hourlyRequestCount
+            Map<Integer, Integer> hourly = current.hourlyRequestCount();
+            int peakHour = 0;
+            int peakHourRequests = 0;
+            if (hourly != null && !hourly.isEmpty()) {
+                var peak = hourly.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .orElse(null);
+                if (peak != null) {
+                    peakHour = peak.getKey();
+                    peakHourRequests = peak.getValue();
+                }
+            }
+
+            // Update derived fields
+            Update derivedUpdate = new Update()
+                .set("uniqueUsers", uniqueUsers)
+                .set("peakHour", peakHour)
+                .set("peakHourRequests", peakHourRequests);
+
+            mongoTemplate.updateFirst(query, derivedUpdate, DailyModelUsage.class);
+        });
+
         log.debug("Updated daily_model_usage: {} documents", grouped.size());
     }
 
@@ -546,13 +607,13 @@ public class UsageAggregationService {
             long totalTokens = dateEvents.stream().mapToLong(UsageEventData::totalTokens).sum();
             int successCount = (int) dateEvents.stream().filter(UsageEventData::isSuccess).count();
             int errorCount = dateEvents.size() - successCount;
-            int uniqueUsers = (int) dateEvents.stream().map(UsageEventData::userId).distinct().count();
+
+            // Collect batch user IDs for $addToSet (fixes uniqueUsers bug)
+            Set<String> batchUserIds = dateEvents.stream()
+                .map(UsageEventData::userId)
+                .collect(Collectors.toSet());
 
             BigDecimal totalCost = costService.calculateBatchCost(dateEvents);
-
-            // 成功率
-            double successRate = dateEvents.isEmpty() ? 0.0 :
-                (double) successCount / dateEvents.size();
 
             // 延遲統計
             TDigest digest = loadOrCreateDigest(date.toString(), SystemStats.class);
@@ -568,10 +629,8 @@ public class UsageAggregationService {
             double cacheHitRate = totalInput > 0 ? (double) totalCacheRead / totalInput : 0.0;
             BigDecimal cacheSaved = costService.calculateCacheSavings(dateEvents);
 
-            // 每小時分布
+            // 每小時分布 (peakHour will be computed after bulk update)
             Map<Integer, Integer> hourlyRequestCount = aggregateHourlyRequestCount(dateEvents);
-            int peakHour = findPeakHourFromCount(hourlyRequestCount);
-            int peakHourRequests = hourlyRequestCount.getOrDefault(peakHour, 0);
 
             // 排行榜
             List<TopItem> topModels = calculateTopModels(dateEvents, 5);
@@ -584,22 +643,23 @@ public class UsageAggregationService {
                 .inc("totalOutputTokens", totalOutput)
                 .inc("totalTokens", totalTokens)
                 .inc("totalRequestCount", dateEvents.size())
-                .set("uniqueUsers", uniqueUsers)
                 .inc("totalEstimatedCostUsd", totalCost.doubleValue())
                 .inc("successCount", successCount)
                 .inc("errorCount", errorCount)
-                .set("successRate", successRate)
                 .set("avgLatencyMs", avgLatency)
                 .set("p50LatencyMs", p50)
                 .set("p90LatencyMs", p90)
                 .set("p99LatencyMs", p99)
                 .set("systemCacheHitRate", cacheHitRate)
                 .inc("systemCacheSavedUsd", cacheSaved.doubleValue())
-                .set("peakHour", peakHour)
-                .set("peakHourRequests", peakHourRequests)
                 .set("topModels", topModels)
                 .set("topUsers", topUsers)
                 .set("lastUpdatedAt", Instant.now());
+
+            // Use $addToSet for each userId (accumulates across batches)
+            for (String userId : batchUserIds) {
+                update.addToSet("userIdSet", userId);
+            }
 
             // 每小時分布使用 $inc
             hourlyRequestCount.forEach((hour, count) ->
@@ -609,6 +669,43 @@ public class UsageAggregationService {
         });
 
         bulkOps.execute();
+
+        // Compute derived fields (successRate, uniqueUsers, peakHour) from accumulated data
+        grouped.keySet().forEach(date -> {
+            Query query = Query.query(Criteria.where("_id").is(date.toString()));
+            SystemStats current = mongoTemplate.findOne(query, SystemStats.class);
+            if (current == null) return;
+
+            // Compute correct values from accumulated data
+            int uniqueUsers = current.userIdSet() != null ? current.userIdSet().size() : 0;
+            double successRate = (current.successCount() + current.errorCount()) > 0
+                ? (double) current.successCount() / (current.successCount() + current.errorCount())
+                : 0.0;
+
+            // Find peak hour from accumulated hourlyRequestCount
+            Map<Integer, Integer> hourly = current.hourlyRequestCount();
+            int peakHour = 0;
+            int peakHourRequests = 0;
+            if (hourly != null && !hourly.isEmpty()) {
+                var peak = hourly.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .orElse(null);
+                if (peak != null) {
+                    peakHour = peak.getKey();
+                    peakHourRequests = peak.getValue();
+                }
+            }
+
+            // Update derived fields
+            Update derivedUpdate = new Update()
+                .set("uniqueUsers", uniqueUsers)
+                .set("successRate", successRate)
+                .set("peakHour", peakHour)
+                .set("peakHourRequests", peakHourRequests);
+
+            mongoTemplate.updateFirst(query, derivedUpdate, SystemStats.class);
+        });
+
         log.debug("Updated system_stats: {} documents", grouped.size());
     }
 

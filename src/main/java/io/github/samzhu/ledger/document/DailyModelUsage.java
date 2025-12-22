@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -43,6 +44,7 @@ public record DailyModelUsage(
     int successCount,
     int errorCount,
     int uniqueUsers,
+    Set<String> userIdSet,  // Track user IDs for accurate uniqueUsers count across batches
 
     // === 錯誤類型分布 ===
     Map<String, Integer> errorBreakdown,
