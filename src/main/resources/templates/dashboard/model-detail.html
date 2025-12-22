@@ -333,14 +333,16 @@
                         const data = await response.json();
                         usages.value = data.usages || [];
                         updateSummary(usages.value);
-                        await nextTick();
-                        renderCharts();
                     } catch (error) {
                         console.error('Error fetching model data:', error);
                         usages.value = [];
                         updateSummary([]);
                     } finally {
                         loading.value = false;
+                        // Wait for Vue to render the template after loading becomes false
+                        await nextTick();
+                        await nextTick();
+                        renderCharts();
                     }
                 };
 

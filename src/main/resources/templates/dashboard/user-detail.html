@@ -681,13 +681,14 @@
                             const data = await response.json();
                             quota.value = data.quota;
                             usages.value = data.usages || [];
-
-                            await nextTick();
-                            renderCharts();
                         } catch (error) {
                             console.error('Error fetching data:', error);
                         } finally {
                             loading.value = false;
+                            // Wait for Vue to render the template after loading becomes false
+                            await nextTick();
+                            await nextTick();
+                            renderCharts();
                         }
                     };
 

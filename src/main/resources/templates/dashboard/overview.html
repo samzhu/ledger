@@ -465,14 +465,17 @@
                         lastDayStats.value = sortedStats.length > 0 ? sortedStats[sortedStats.length - 1] : null;
                         topModels.value = lastDayStats.value?.topModels || [];
                         updateSummary(stats.value);
-                        await nextTick();
-                        renderCharts();
                     } catch (error) {
                         console.error('Error fetching data:', error);
                         stats.value = [];
                         topUsers.value = [];
                     } finally {
                         loading.value = false;
+                        // Wait for Vue to render the template (v-else block) after loading becomes false
+                        await nextTick();
+                        // Then wait one more tick for v-if="lastDayStats" to render
+                        await nextTick();
+                        renderCharts();
                     }
                 };
 

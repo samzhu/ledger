@@ -342,14 +342,16 @@
                         startDate.value = data.startDate || '';
                         endDate.value = data.endDate || '';
                         updateSummary(models.value);
-                        await nextTick();
-                        renderCharts();
                     } catch (error) {
                         console.error('Error fetching models:', error);
                         models.value = [];
                         updateSummary([]);
                     } finally {
                         loading.value = false;
+                        // Wait for Vue to render the template after loading becomes false
+                        await nextTick();
+                        await nextTick();
+                        renderCharts();
                     }
                 };
 
