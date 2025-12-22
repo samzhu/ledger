@@ -149,7 +149,7 @@
                 <div class="flex justify-between pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
                     <span class="text-slate-500 dark:text-slate-400">Period</span>
                     <span class="text-slate-800 dark:text-white"
-                          th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</span>
+                          th:text="${user.periodYear()} + '-' + ${#strings.padLeft('' + user.periodMonth(), 2, '0')}">2025-12</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-500 dark:text-slate-400">Status</span>
@@ -225,7 +225,7 @@
                     </div>
                     <div>
                         <span class="text-slate-500 dark:text-slate-400">Period:</span>
-                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</span>
+                        <span class="font-medium text-slate-800 dark:text-white ml-1" th:text="${user.periodYear()} + '-' + ${#strings.padLeft('' + user.periodMonth(), 2, '0')}">2025-12</span>
                     </div>
                 </div>
                 <!-- Progress Bar -->
@@ -295,7 +295,7 @@
 
                         <!-- Period -->
                         <td class="px-6 py-4 text-center text-sm text-slate-600 dark:text-slate-300"
-                            th:text="${user.periodYear()} + '-' + ${#strings.padLeft(user.periodMonth(), 2, '0')}">2025-12</td>
+                            th:text="${user.periodYear()} + '-' + ${#strings.padLeft('' + user.periodMonth(), 2, '0')}">2025-12</td>
 
                         <!-- Cost Limit -->
                         <td class="px-6 py-4 text-right text-sm text-slate-800 dark:text-white font-medium"

@@ -35,7 +35,7 @@
             <div>
                 <h2 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white">Quota Status</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400"
-                   th:text="'Period: ' + ${quota.periodYear()} + '-' + ${#strings.padLeft(quota.periodMonth(), 2, '0')}">Period: 2025-12</p>
+                   th:text="'Period: ' + ${quota.periodYear()} + '-' + ${#strings.padLeft('' + quota.periodMonth(), 2, '0')}">Period: 2025-12</p>
             </div>
             <span th:if="${quota.quotaExceeded()}"
                   class="inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">
