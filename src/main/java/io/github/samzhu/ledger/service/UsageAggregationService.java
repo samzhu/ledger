@@ -632,9 +632,7 @@ public class UsageAggregationService {
             // 每小時分布 (peakHour will be computed after bulk update)
             Map<Integer, Integer> hourlyRequestCount = aggregateHourlyRequestCount(dateEvents);
 
-            // 排行榜
-            List<TopItem> topModels = calculateTopModels(dateEvents, 5);
-            List<TopItem> topUsers = calculateTopUsers(dateEvents, 10);
+            // topModels and topUsers will be computed from accumulated data after bulk update
 
             Query query = Query.query(Criteria.where("_id").is(date.toString()));
             Update update = new Update()
@@ -652,8 +650,6 @@ public class UsageAggregationService {
                 .set("p99LatencyMs", p99)
                 .set("systemCacheHitRate", cacheHitRate)
                 .inc("systemCacheSavedUsd", cacheSaved.doubleValue())
-                .set("topModels", topModels)
-                .set("topUsers", topUsers)
                 .set("lastUpdatedAt", Instant.now());
 
             // Use $addToSet for each userId (accumulates across batches)
@@ -670,7 +666,7 @@ public class UsageAggregationService {
 
         bulkOps.execute();
 
-        // Compute derived fields (successRate, uniqueUsers, peakHour) from accumulated data
+        // Compute derived fields (successRate, uniqueUsers, peakHour, topModels, topUsers) from accumulated data
         grouped.keySet().forEach(date -> {
             Query query = Query.query(Criteria.where("_id").is(date.toString()));
             SystemStats current = mongoTemplate.findOne(query, SystemStats.class);
@@ -696,12 +692,20 @@ public class UsageAggregationService {
                 }
             }
 
+            // Compute topModels from DailyModelUsage (accumulated across all batches)
+            List<TopItem> topModels = computeTopModelsFromDailyUsage(date, 5);
+
+            // Compute topUsers from DailyUserUsage (accumulated across all batches)
+            List<TopItem> topUsers = computeTopUsersFromDailyUsage(date, 10);
+
             // Update derived fields
             Update derivedUpdate = new Update()
                 .set("uniqueUsers", uniqueUsers)
                 .set("successRate", successRate)
                 .set("peakHour", peakHour)
-                .set("peakHourRequests", peakHourRequests);
+                .set("peakHourRequests", peakHourRequests)
+                .set("topModels", topModels)
+                .set("topUsers", topUsers);
 
             mongoTemplate.updateFirst(query, derivedUpdate, SystemStats.class);
         });
@@ -894,6 +898,52 @@ public class UsageAggregationService {
                 e.getValue().size(),
                 e.getValue().stream().mapToLong(UsageEventData::totalTokens).sum(),
                 costService.calculateBatchCost(e.getValue())))
+            .sorted(Comparator.comparingLong(TopItem::totalTokens).reversed())
+            .limit(limit)
+            .toList();
+    }
+
+    /**
+     * 從 DailyModelUsage 計算 Top Models（累積數據）。
+     *
+     * <p>查詢指定日期的所有 DailyModelUsage 文件，按請求數排序返回 Top N。
+     */
+    private List<TopItem> computeTopModelsFromDailyUsage(LocalDate date, int limit) {
+        String datePrefix = date.toString() + "_";
+        Query query = Query.query(Criteria.where("_id").regex("^" + datePrefix));
+        query.fields().include("model", "requestCount", "totalTokens", "estimatedCostUsd");
+
+        List<DailyModelUsage> modelUsages = mongoTemplate.find(query, DailyModelUsage.class);
+
+        return modelUsages.stream()
+            .map(m -> new TopItem(
+                m.model(),
+                m.requestCount(),
+                m.totalTokens(),
+                m.estimatedCostUsd() != null ? m.estimatedCostUsd() : BigDecimal.ZERO))
+            .sorted(Comparator.comparingInt(TopItem::requestCount).reversed())
+            .limit(limit)
+            .toList();
+    }
+
+    /**
+     * 從 DailyUserUsage 計算 Top Users（累積數據）。
+     *
+     * <p>查詢指定日期的所有 DailyUserUsage 文件，按總 Token 數排序返回 Top N。
+     */
+    private List<TopItem> computeTopUsersFromDailyUsage(LocalDate date, int limit) {
+        String datePrefix = date.toString() + "_";
+        Query query = Query.query(Criteria.where("_id").regex("^" + datePrefix));
+        query.fields().include("userId", "requestCount", "totalTokens", "estimatedCostUsd");
+
+        List<DailyUserUsage> userUsages = mongoTemplate.find(query, DailyUserUsage.class);
+
+        return userUsages.stream()
+            .map(u -> new TopItem(
+                u.userId(),
+                u.requestCount(),
+                u.totalTokens(),
+                u.estimatedCostUsd() != null ? u.estimatedCostUsd() : BigDecimal.ZERO))
             .sorted(Comparator.comparingLong(TopItem::totalTokens).reversed())
             .limit(limit)
             .toList();
